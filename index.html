@@ -413,6 +413,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
     <div class="sf-label">本月剩餘預算</div>
     <div class="sf-remain" id="sb-remain">—</div>
     <div class="bar-track"><div class="bar-fill" id="sb-bar" style="width:0%"></div></div>
+    <button onclick="syncFromSheets()" style="margin-top:10px;width:100%;background:rgba(255,255,255,.08);border:0.5px solid rgba(255,255,255,.15);color:rgba(255,255,255,.6);border-radius:8px;padding:7px;font-size:11px;cursor:pointer;font-family:var(--mono);">☁ 從 Sheets 同步</button>
   </div>
 </nav>
 
@@ -740,12 +741,92 @@ let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth() + 1; // 1-12
 let modalYear = currentYear;
 
+// ── Google Apps Script 串接 ──
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyyhSqUg6WCL-HvbyEjuaRWmR5T4cIfbyzdT6dXsCWwCXSZngW-yhlr_aEgCydUlhMuTg/exec';
+
+async function gasGet() {
+  try {
+    const res = await fetch(GAS_URL + '?action=getAll');
+    const data = await res.json();
+    return data.records || {};
+  } catch(e) { return null; }
+}
+
+async function gasPost(body) {
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify(body)
+    });
+    return await res.json();
+  } catch(e) { return null; }
+}
+
+function recToSheetRow(date, rec) {
+  return {
+    '日期': date,
+    '活動': rec.event||'',
+    '關鍵字花費':  getKwField(rec,'spend'),
+    '關鍵字曝光':  getKwField(rec,'imp'),
+    '關鍵字點擊':  getKwField(rec,'click'),
+    '關鍵字訂單':  getKwField(rec,'orders'),
+    '關鍵字金額':  getKwField(rec,'rev'),
+    '推薦花費':    rec.rec?.spend||0,
+    '推薦曝光':    rec.rec?.imp||0,
+    '推薦點擊':    rec.rec?.click||0,
+    '推薦訂單':    rec.rec?.orders||0,
+    '推薦金額':    rec.rec?.rev||0,
+    '備註':        rec.note||'',
+    '今日預算':    rec.budgetToday||0
+  };
+}
+
+function sheetRowToRec(row) {
+  return {
+    date:        row['日期'],
+    event:       row['活動']||'',
+    budgetToday: parseFloat(row['今日預算'])||0,
+    kw: {
+      spend:  parseFloat(row['關鍵字花費'])||0,
+      imp:    parseFloat(row['關鍵字曝光'])||0,
+      click:  parseFloat(row['關鍵字點擊'])||0,
+      orders: parseFloat(row['關鍵字訂單'])||0,
+      rev:    parseFloat(row['關鍵字金額'])||0
+    },
+    rec: {
+      spend:  parseFloat(row['推薦花費'])||0,
+      imp:    parseFloat(row['推薦曝光'])||0,
+      click:  parseFloat(row['推薦點擊'])||0,
+      orders: parseFloat(row['推薦訂單'])||0,
+      rev:    parseFloat(row['推薦金額'])||0
+    },
+    note: row['備註']||''
+  };
+}
+
+// 從 Sheets 同步所有資料到 localStorage
+async function syncFromSheets() {
+  showToast('🔄 從 Google Sheets 同步中…');
+  const rows = await gasGet();
+  if(!rows) { showToast('⚠ 無法連線，使用本機資料'); return; }
+  const local = getAllRecords();
+  Object.keys(rows).forEach(date => {
+    local[date] = sheetRowToRec(rows[date]);
+  });
+  localStorage.setItem('momo_ad_records', JSON.stringify(local));
+  recalcCumulative();
+  showToast('✓ 已從 Google Sheets 同步 '+Object.keys(rows).length+' 筆資料');
+}
+
 // ── Init ──
 const today = new Date();
 document.getElementById('record-date').value = today.toISOString().split('T')[0];
 loadMonthSettings();
 updateMonthDisplay();
 updateBudget();
+
+// 啟動時自動從 Sheets 同步
+syncFromSheets();
 
 // ── Month key helper ──
 function monthKey(y, m) { return `${y}-${String(m).padStart(2,'0')}`; }
@@ -978,6 +1059,11 @@ function saveRecord() {
   saveMonthSettings();
   updateBudget();
   showToast('✓ 已儲存 '+date+'｜累計 $'+Math.round(monthTotal).toLocaleString());
+
+  // 同步到 Google Sheets（背景執行，不阻塞 UI）
+  gasPost({ action: 'save', record: recToSheetRow(date, rec) })
+    .then(r => { if(r?.status) showToast('☁ 已同步到 Google Sheets'); })
+    .catch(() => showToast('⚠ 本機已儲存，Sheets 同步失敗'));
 }
 
 // 統一取關鍵字花費（相容舊資料 r5+zp 格式）
