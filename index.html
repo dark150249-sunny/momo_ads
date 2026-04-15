@@ -414,6 +414,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
     <div class="sf-remain" id="sb-remain">—</div>
     <div class="bar-track"><div class="bar-fill" id="sb-bar" style="width:0%"></div></div>
     <button onclick="syncFromSheets()" style="margin-top:10px;width:100%;background:rgba(255,255,255,.08);border:0.5px solid rgba(255,255,255,.15);color:rgba(255,255,255,.6);border-radius:8px;padding:7px;font-size:11px;cursor:pointer;font-family:var(--mono);">☁ 從 Sheets 同步</button>
+    <button onclick="testGAS()" style="margin-top:6px;width:100%;background:rgba(255,255,255,.04);border:0.5px solid rgba(255,255,255,.1);color:rgba(255,255,255,.4);border-radius:8px;padding:7px;font-size:11px;cursor:pointer;font-family:var(--mono);">🔧 測試連線</button>
   </div>
 </nav>
 
@@ -817,6 +818,17 @@ function sheetRowToRec(row) {
     },
     note: row['備註']||''
   };
+}
+
+async function testGAS() {
+  showToast('🔧 測試中...');
+  try {
+    const data = await jsonp({ action: 'getAll' });
+    const count = Object.keys(data.records||{}).length;
+    alert('✓ 連線成功！取得 ' + count + ' 筆資料\n\n' + JSON.stringify(data).slice(0, 200));
+  } catch(e) {
+    alert('✗ 連線失敗：' + (e?.message || e || '未知錯誤'));
+  }
 }
 
 // 從 Sheets 同步所有資料到 localStorage
