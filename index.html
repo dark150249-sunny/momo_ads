@@ -784,6 +784,30 @@ function recToSheetRow(date, rec) {
 }
 
 function sheetRowToRec(row) {
+  // Apps Script 直接回傳 kw/rec 物件格式
+  if(row.kw !== undefined) {
+    return {
+      date:        row.date,
+      event:       row.event||'',
+      budgetToday: 0,
+      kw: {
+        spend:  parseFloat(row.kw?.spend)||0,
+        imp:    parseFloat(row.kw?.imp)||0,
+        click:  parseFloat(row.kw?.click)||0,
+        orders: parseFloat(row.kw?.orders)||0,
+        rev:    parseFloat(row.kw?.rev)||0
+      },
+      rec: {
+        spend:  parseFloat(row.rec?.spend)||0,
+        imp:    parseFloat(row.rec?.imp)||0,
+        click:  parseFloat(row.rec?.click)||0,
+        orders: parseFloat(row.rec?.orders)||0,
+        rev:    parseFloat(row.rec?.rev)||0
+      },
+      note: row.note||''
+    };
+  }
+  // 舊格式（中文欄位名稱）
   return {
     date:        row['日期'],
     event:       row['活動']||'',
