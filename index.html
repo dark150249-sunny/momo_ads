@@ -221,8 +221,12 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
 .confirm-box .c-msg{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.6;}
 .confirm-box .c-actions{display:flex;gap:8px;justify-content:flex-end;}
 
-.toast{position:fixed;bottom:28px;right:28px;background:var(--text);color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-family:var(--mono);opacity:0;transform:translateY(10px);transition:all .25s;pointer-events:none;box-shadow:var(--shadow-md);z-index:999;display:flex;align-items:center;gap:8px;}
+.toast{position:fixed;bottom:28px;right:28px;background:var(--text);color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-family:var(--mono);opacity:0;transform:translateY(10px);transition:all .25s;pointer-events:none;box-shadow:var(--shadow-md);z-index:9999;display:flex;align-items:center;gap:8px;}
 .toast.show{opacity:1;transform:translateY(0);}
+@media(max-width:768px){
+  .toast{bottom:auto;top:80px;right:14px;left:14px;text-align:center;justify-content:center;border-radius:10px;}
+  .toast.show{transform:translateY(0);}
+}
 
 /* MoM summary */
 .mom-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:16px 20px;margin-bottom:18px;}
@@ -352,14 +356,138 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
 @media(max-width:768px){.budget-settings-row{grid-template-columns:repeat(2,1fr);}.budget-alloc-summary{grid-template-columns:repeat(2,1fr);}}
 
 @media(max-width:768px){
+  /* 隱藏側欄、保留底部導覽 */
   .sidebar{display:none;}
-  .cards-grid{grid-template-columns:1fr;}
-  .summary-row{grid-template-columns:repeat(2,1fr);}
-  .budget-strip{flex-direction:column;align-items:flex-start;gap:12px;}
-  .content{padding:20px 16px 60px;}
-  .topbar{padding:12px 16px;}
+
+  /* 主要容器 - 維持淺色背景 */
+  .layout{flex-direction:column;}
+  .main{width:100%;padding-bottom:70px;background:var(--bg);}
+  .content{padding:12px 14px 80px;background:var(--bg);}
+  body{background:var(--bg);}
+
+  /* 頂部列 */
+  .topbar{padding:8px 14px;gap:6px;}
+  .topbar-left{gap:6px;}
+  .topbar-left h1{font-size:13px;}
+  .topbar-right{gap:6px;}
+  .topbar-right .btn{font-size:12px;padding:5px 10px;}
+  .topbar .date-pill{display:none;}
+  .topbar .month-badge{display:none;}
+
+  /* 預算進度條：改成2行排列避免數字被遮 */
+  .budget-strip{
+    flex-direction:row;flex-wrap:wrap;
+    gap:10px;padding:12px 14px;
+    align-items:center;
+  }
+  .bs-stat{flex:1;min-width:80px;}
+  .bs-stat .bs-lbl{font-size:9px;}
+  .bs-stat .bs-val{font-size:15px;}
+  .bs-divider{display:none;}
+  .bs-prog{flex:0 0 100%;order:10;}
+
+  /* 今日三欄：預算+活動一排，使用率一整行 */
+  .quick-inputs{grid-template-columns:1fr 1fr;gap:8px;}
+  .quick-inputs .q-field:last-child{grid-column:1/-1;}
+  .q-field input{font-size:13px;padding:8px 10px;}
+
+  /* 輸入欄位不裁切 */
+  .cards-grid{grid-template-columns:1fr;gap:12px;}
+  .fields{grid-template-columns:1fr 1fr;gap:8px;}
+  .field input, .field .input-wrap{width:100%;}
+  .input-wrap{min-width:0;}
+  .metrics-row{grid-template-columns:repeat(3,1fr);gap:6px;}
+  .metric-chip{padding:8px 6px;}
+  .mc-lbl{font-size:9px;}
+  .mc-val{font-size:12px;}
+
+  /* Summary row */
+  .summary-row{grid-template-columns:repeat(2,1fr);gap:8px;}
+  .s-card{padding:12px 14px;}
+  .s-lbl{font-size:10px;}
+  .s-val{font-size:20px;}
+
+  /* 歷史記錄 */
   .month-summary-card{grid-template-columns:repeat(2,1fr);}
+  .history-toolbar{flex-direction:column;gap:8px;align-items:flex-start;}
+  .history-filters{flex-wrap:wrap;gap:6px;}
+
+  /* 數據統計 */
+  .stats-kpi{grid-template-columns:repeat(2,1fr);}
+  .stats-charts-row{flex-direction:column;}
+  .stats-toolbar{flex-direction:column;gap:8px;align-items:flex-start;}
+
+  /* 預算分配 */
+  .budget-settings-row{grid-template-columns:1fr 1fr;gap:8px;}
+  .bset-card{padding:10px 12px;overflow:hidden;}
+  .bset-card .input-wrap{min-width:0;}
+  .bset-card input{min-width:0;width:100%;font-size:13px;padding:6px 8px;}
+  .bset-label{font-size:10px;}
+  .budget-alloc-summary{grid-template-columns:repeat(2,1fr);}
+  .bas-item{padding:10px 12px;}
+  .bas-item .bas-val{font-size:16px;}
+  .mt-top{grid-template-columns:repeat(2,1fr);}
+  .budget-page-header{flex-direction:column;gap:8px;}
+  .budget-table{font-size:12px;}
+  .budget-table{font-size:12px;}
+  .budget-table th,.budget-table td{padding:6px 8px;white-space:nowrap;}
+  .budget-table td input{font-size:12px;padding:4px 6px;min-width:60px;}
+  /* 所有欄位恢復顯示，改用橫向捲動 */
+  .budget-table th:nth-child(5),.budget-table td:nth-child(5),
+  .budget-table th:nth-child(6),.budget-table td:nth-child(6),
+  .budget-table th:nth-child(7),.budget-table td:nth-child(7),
+  .budget-table th:nth-child(8),.budget-table td:nth-child(8),
+  .budget-table th:nth-child(9),.budget-table td:nth-child(9){display:table-cell;}
+  .budget-table th:nth-child(1),.budget-table td:nth-child(1){width:44px;}
+  .budget-table th:nth-child(2),.budget-table td:nth-child(2){min-width:90px;}
+  .budget-table th:nth-child(3),.budget-table td:nth-child(3){width:64px;}
+  .budget-table th:nth-child(4),.budget-table td:nth-child(4){width:70px;}
+  /* 表格容器橫向捲動 */
+  .budget-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  /* 活動輸入框文字顏色修正 */
+  .budget-table .ev-input{
+    font-size:12px;width:100%;min-width:80px;
+    color:var(--text) !important;
+    -webkit-text-fill-color:var(--text) !important;
+  }
+
+  /* 卡片 */
+  .card{border-radius:12px;}
+  .card-body{padding:14px;}
 }
+@media(min-width:769px){
+  .mobile-nav{display:none !important;}
+  .mobile-month-bar{display:none !important;}
+}
+.mobile-nav{
+  position:fixed;bottom:0;left:0;right:0;height:62px;
+  background:var(--text);border-top:1px solid rgba(255,255,255,.1);
+  display:none;align-items:center;justify-content:space-around;
+  z-index:1000;padding-bottom:env(safe-area-inset-bottom);
+}
+.mobile-nav-item{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  color:rgba(255,255,255,.45);font-size:10px;font-family:var(--mono);
+  cursor:pointer;padding:6px 10px;border-radius:10px;border:none;
+  background:transparent;transition:all .15s;min-width:56px;
+}
+.mobile-nav-item .mn-icon{font-size:20px;}
+.mobile-nav-item.active{color:#fff;}
+.mobile-nav-item.active .mn-icon{transform:scale(1.15);}
+/* 手機版月份快捷列 */
+.mobile-month-bar{
+  display:none;align-items:center;justify-content:space-between;gap:8px;
+  padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--border);
+  position:sticky;top:52px;z-index:99;
+}
+@media(max-width:768px){
+  .mobile-nav{display:flex;}
+  .mobile-month-bar{display:flex;}
+}
+.mmb-month{font-size:13px;font-weight:600;font-family:var(--mono);display:flex;align-items:center;gap:8px;}
+.mmb-btn{background:var(--surface2);border:0.5px solid var(--border);border-radius:6px;padding:3px 10px;font-size:13px;cursor:pointer;color:var(--text);}
+.mmb-remain{font-size:12px;font-family:var(--mono);color:var(--green);font-weight:600;}
+
 </style>
 </head>
 <body>
@@ -420,6 +548,45 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
 
 <!-- Main -->
 <div class="main">
+  <!-- 手機版月份快捷列 -->
+  <div class="mobile-month-bar">
+    <div class="mmb-month">
+      <button class="mmb-btn" onclick="shiftMonth(-1)">‹</button>
+      <span id="mmb-month-display" onclick="openMonthModal()" style="cursor:pointer;font-size:13px;">—</span>
+      <button class="mmb-btn" onclick="shiftMonth(1)">›</button>
+    </div>
+    <input type="date" id="record-date-mobile" onchange="document.getElementById('record-date').value=this.value;onDateChange(this.value)" style="border:0.5px solid var(--border);border-radius:8px;padding:4px 8px;font-size:12px;font-family:var(--mono);background:var(--surface2);color:var(--text);">
+    <div style="display:flex;align-items:center;gap:6px;">
+      <div class="mmb-remain" id="mmb-remain" onclick="openBudgetModal()" style="cursor:pointer;" title="點擊設定月預算">—</div>
+    </div>
+  </div>
+
+  <!-- 手機版月預算設定 Modal -->
+  <div id="budget-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:flex-end;justify-content:center;">
+    <div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;max-width:500px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <div style="font-size:16px;font-weight:700;">月預算設定</div>
+        <button onclick="closeBudgetModal()" style="background:var(--surface2);border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:16px;">✕</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <div style="font-size:11px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">月預算上限</div>
+          <div style="display:flex;align-items:center;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface2);">
+            <span style="padding:10px 12px;color:var(--text3);font-family:var(--mono);">$</span>
+            <input type="number" id="b-total-mobile" placeholder="50000" oninput="document.getElementById('b-total').value=this.value;saveMonthSettings();updateBudget();" style="flex:1;border:none;outline:none;padding:10px 8px;font-size:16px;font-family:var(--mono);font-weight:600;background:transparent;color:var(--text);">
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">累計已花費</div>
+          <div style="display:flex;align-items:center;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface2);">
+            <span style="padding:10px 12px;color:var(--text3);font-family:var(--mono);">$</span>
+            <input type="number" id="b-cum-mobile" placeholder="0" oninput="document.getElementById('b-cum').value=this.value;saveMonthSettings();updateBudget();" style="flex:1;border:none;outline:none;padding:10px 8px;font-size:16px;font-family:var(--mono);font-weight:600;background:transparent;color:var(--text);">
+          </div>
+        </div>
+        <button onclick="closeBudgetModal()" style="background:var(--text);color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;margin-top:4px;">確認</button>
+      </div>
+    </div>
+  </div>
   <div class="topbar">
     <div class="topbar-left">
       <h1 id="page-title">每日廣告成效輸入</h1>
@@ -655,12 +822,12 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
 
       <!-- Daily table -->
       <div class="stats-card" style="padding:0;overflow:hidden;">
-        <div style="overflow-x:auto;">
+        <div class="budget-table-wrap" style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
           <table class="stats-table budget-table" id="budget-table">
             <thead>
               <tr>
                 <th style="text-align:left;">日期</th>
-                <th style="text-align:left;">活動標記</th>
+                <th style="text-align:left;">活動</th>
                 <th style="text-align:left;">日型</th>
                 <th>日預算</th>
                 <th>ROAS 5組</th>
@@ -679,6 +846,28 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
 
   </div>
 </div>
+</div>
+
+<!-- Mobile bottom nav -->
+<nav class="mobile-nav">
+  <button class="mobile-nav-item active" id="mnav-input" onclick="gotoPage('input',this);setMobileNav('input')">
+    <span class="mn-icon">✏️</span><span>輸入</span>
+  </button>
+  <button class="mobile-nav-item" id="mnav-history" onclick="gotoPage('history',this);setMobileNav('history')">
+    <span class="mn-icon">📋</span><span>記錄</span>
+  </button>
+  <button class="mobile-nav-item" id="mnav-stats" onclick="gotoPage('stats',this);setMobileNav('stats')">
+    <span class="mn-icon">📊</span><span>統計</span>
+  </button>
+  <button class="mobile-nav-item" id="mnav-budget" onclick="gotoPage('budget',this);setMobileNav('budget')">
+    <span class="mn-icon">💰</span><span>預算</span>
+  </button>
+</nav>
+
+<!-- 手機版輸入頁固定操作列 -->
+<div id="mobile-action-bar" style="display:none;position:fixed;bottom:62px;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:8px 14px;z-index:999;gap:8px;align-items:center;">
+  <button onclick="clearAll()" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text);">清除</button>
+  <button onclick="saveRecord()" style="flex:2;background:var(--text);color:#fff;border:none;border-radius:10px;padding:10px;font-size:14px;font-weight:600;cursor:pointer;">💾 儲存</button>
 </div>
 
 <!-- Month Modal -->
@@ -870,6 +1059,12 @@ updateBudget();
 // 啟動時自動從 Sheets 同步
 syncFromSheets();
 
+// 手機版初始顯示操作列
+if(window.innerWidth <= 768) {
+  const bar = document.getElementById('mobile-action-bar');
+  if(bar) bar.style.display = 'flex';
+}
+
 // ── Month key helper ──
 function monthKey(y, m) { return `${y}-${String(m).padStart(2,'0')}`; }
 function currentMonthKey() { return monthKey(currentYear, currentMonth); }
@@ -1049,11 +1244,21 @@ function updateBudget() {
   setEl('sb-remain', remain>=0 ? '$'+Math.round(remain).toLocaleString() : '超支');
   setEl('bs-total', '$'+(total||0).toLocaleString());
   setEl('bs-cum',   '$'+(cum||0).toLocaleString());
+  // 手機版月份快捷列
+  const mmb = document.getElementById('mmb-month-display');
+  if(mmb) mmb.textContent = currentYear+'年'+currentMonth+'月';
+  const mmbRemain = document.getElementById('mmb-remain');
+  if(mmbRemain) mmbRemain.textContent = remain>=0 ? '剩 $'+Math.round(remain).toLocaleString() : '超支';
 }
 
 // ── Date change: auto-load or clear ──
 function onDateChange(date) {
   if(!date) return;
+  // 同步兩個日期選擇器
+  const d1 = document.getElementById('record-date');
+  const d2 = document.getElementById('record-date-mobile');
+  if(d1 && d1.value !== date) d1.value = date;
+  if(d2 && d2.value !== date) d2.value = date;
   const [y,m] = date.split('-').map(Number);
   // 切換月份
   if(y !== currentYear || m !== currentMonth) {
@@ -1152,6 +1357,7 @@ function loadRecord(date) {
   calcAll(); updateBudget();
   recalcCumulative();
   gotoPageDirect('input');
+  setMobileNav('input');
   showToast('📂 已載入 '+date);
 }
 
@@ -2013,7 +2219,7 @@ function renderBudgetTable() {
     if(isPast) tr.classList.add('past');
     tr.innerHTML = `
       <td class="td-left" style="white-space:nowrap;">${date.slice(5).replace('-','/')} ${isToday?'<span style="font-size:10px;background:var(--accent);color:#fff;padding:1px 6px;border-radius:99px;margin-left:4px;">今天</span>':''}</td>
-      <td class="td-left"><input class="ev-input" type="text" value="${p.event||''}" placeholder="活動…" style="width:100%;border:none;outline:none;font-size:12px;font-family:var(--sans);padding:8px 12px;background:transparent;color:var(--text);" oninput="updateBudgetSummary()"></td>
+      <td class="td-left"><input class="ev-input" type="text" value="${p.event||''}" placeholder="活動" style="width:100%;border:none;outline:none;font-size:12px;font-family:var(--sans);padding:8px 6px;background:transparent;color:var(--text);opacity:1;" oninput="updateBudgetSummary()"></td>
       <td class="td-left">
         <select class="type-select" style="border:none;outline:none;font-size:11px;font-family:var(--mono);padding:4px 8px;border-radius:6px;cursor:pointer;background:transparent;" onchange="updateBudgetPage()">
           <option value="normal" ${type==='normal'?'selected':''}>一般</option>
@@ -2324,6 +2530,42 @@ async function captureStats() {
     btn.textContent = '📷 截圖分享';
     btn.disabled = false;
   }
+}
+
+function setMobileNav(id) {
+  document.querySelectorAll('.mobile-nav-item').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('mnav-' + id);
+  if(btn) btn.classList.add('active');
+  // 控制操作列
+  const bar = document.getElementById('mobile-action-bar');
+  if(!bar) return;
+  if(id === 'input') {
+    bar.style.display = 'flex';
+    bar.innerHTML = `<button onclick="clearAll()" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text);">清除</button>
+    <button onclick="saveRecord()" style="flex:2;background:var(--text);color:#fff;border:none;border-radius:10px;padding:10px;font-size:14px;font-weight:600;cursor:pointer;">💾 儲存</button>`;
+  } else if(id === 'budget') {
+    bar.style.display = 'flex';
+    bar.innerHTML = `<button onclick="autoFillBudget()" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text);">⚡ 自動建議</button>
+    <button onclick="saveBudgetPlan()" style="flex:2;background:var(--text);color:#fff;border:none;border-radius:10px;padding:10px;font-size:14px;font-weight:600;cursor:pointer;">💾 儲存計畫</button>`;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function openBudgetModal() {
+  const modal = document.getElementById('budget-modal');
+  if(!modal) return;
+  // 同步目前值
+  const t = document.getElementById('b-total-mobile');
+  const c = document.getElementById('b-cum-mobile');
+  if(t) t.value = document.getElementById('b-total').value || '';
+  if(c) c.value = document.getElementById('b-cum').value || '';
+  modal.style.display = 'flex';
+}
+
+function closeBudgetModal() {
+  const modal = document.getElementById('budget-modal');
+  if(modal) modal.style.display = 'none';
 }
 
 function showToast(msg) {
