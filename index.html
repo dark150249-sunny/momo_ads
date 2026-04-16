@@ -372,11 +372,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
   .topbar-right{gap:4px;flex-shrink:0;}
   .topbar-right .btn{font-size:11px;padding:5px 8px;}
   .topbar-right .btn-ghost{display:none;}
-  /* 預算頁的自動建議、統計頁的截圖 — 手機版保留 */
   .topbar-right .btn-ghost.mobile-show{display:flex;}
   .topbar .date-pill{display:none;}
   .topbar .month-badge{display:none;}
-  .mobile-month-bar{top:48px;}
 
   /* 預算進度條：改成2行排列避免數字被遮 */
   .budget-strip{
@@ -486,7 +484,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
 }
 @media(max-width:768px){
   .mobile-nav{display:flex;}
-  .mobile-month-bar{display:flex;}
+  .mobile-month-bar{display:none !important;}
 }
 .mmb-month{font-size:13px;font-weight:600;font-family:var(--mono);display:flex;align-items:center;gap:8px;}
 .mmb-btn{background:var(--surface2);border:0.5px solid var(--border);border-radius:6px;padding:3px 10px;font-size:13px;cursor:pointer;color:var(--text);}
