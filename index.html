@@ -89,7 +89,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
 .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text2);}
 .btn-ghost:hover{background:var(--surface2);}
 
-.content{padding:28px 32px 60px;max-width:1000px;}
+.content{padding:28px 32px 60px;max-width:1400px;margin:0 auto;}
 
 /* Budget strip */
 .budget-strip{background:var(--text);border-radius:var(--radius-lg);padding:18px 24px;margin-bottom:24px;display:flex;align-items:center;gap:28px;flex-wrap:wrap;color:#fff;}
@@ -372,6 +372,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
   .topbar-right{gap:4px;flex-shrink:0;}
   .topbar-right .btn{font-size:11px;padding:5px 8px;}
   .topbar-right .btn-ghost{display:none;}
+  /* 預算頁的自動建議、統計頁的截圖 — 手機版保留 */
+  .topbar-right .btn-ghost.mobile-show{display:flex;}
   .topbar .date-pill{display:none;}
   .topbar .month-badge{display:none;}
   .mobile-month-bar{top:48px;}
@@ -474,6 +476,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
   background:transparent;transition:all .15s;min-width:56px;
 }
 .mobile-nav-item .mn-icon{font-size:20px;}
+@media(max-width:768px){ #stats-capture-row{display:none !important;} }
 .mobile-nav-item.active{color:#fff;}
 .mobile-nav-item.active .mn-icon{transform:scale(1.15);}
 /* 手機版月份快捷列 */
@@ -530,8 +533,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
 
   <div class="nav-section" style="margin-top:8px;">
     <div class="nav-label">主選單</div>
-    <button class="nav-item active" id="nav-input" onclick="gotoPage('input',this)">
-      <span class="icon">✏️</span> 每日輸入
+    <button class="nav-item" id="nav-input" onclick="gotoPage('input',this)">
+      <span class="icon">✏️</span> 手動輸入
       <span class="dot dot-green"></span>
     </button>
     <button class="nav-item" id="nav-history" onclick="gotoPage('history',this)">
@@ -591,8 +594,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
   </div>
   <div class="topbar" id="main-topbar">
     <div class="topbar-left">
-      <h1 id="page-title">每日輸入｜—</h1>
-      <div class="month-badge" id="topbar-month" onclick="openMonthModal()" style="cursor:pointer;" title="切換月份">📅 —</div>
+      <h1 id="page-title">手動輸入｜—</h1>
+      <div class="month-badge" id="topbar-month" style="display:none;">📅 —</div>
       <div class="date-pill" id="topbar-date-pill">
         <span>日期</span>
         <input type="date" id="record-date" onchange="onDateChange(this.value)">
@@ -609,7 +612,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
   <div class="content">
 
     <!-- INPUT PAGE -->
-    <div class="page-section active" id="page-input">
+    <div class="page-section" id="page-input">
 
       <div class="budget-strip">
         <div class="bs-stat">
@@ -708,6 +711,11 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
     <!-- STATS PAGE -->
     <div class="page-section" id="page-stats">
 
+      <!-- 截圖分享按鈕（電腦版顯示在這裡，月均ROAS上方） -->
+      <div id="stats-capture-row" style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+        <button class="btn btn-ghost" onclick="captureStats()" style="font-size:12px;">📷 截圖分享</button>
+      </div>
+
       <!-- KPI Cards -->
       <div class="stats-kpi" id="stats-kpi"></div>
 
@@ -793,6 +801,13 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
         </div>
       </div>
 
+      <!-- 設定區按鈕列 -->
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:12px;">
+        <button class="btn btn-ghost" onclick="autoFillBudget()" style="font-size:12px;">⚡ 自動建議</button>
+        <button class="btn btn-ghost" onclick="exportBudgetCSV()" style="font-size:12px;">⬇ 匯出</button>
+        <button class="btn btn-primary" onclick="saveBudgetPlan()" style="font-size:12px;">💾 儲存</button>
+      </div>
+
       <!-- Summary bar -->
       <div class="budget-alloc-summary" id="budget-alloc-summary"></div>
 
@@ -826,13 +841,13 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
 
 <!-- Mobile bottom nav -->
 <nav class="mobile-nav">
-  <button class="mobile-nav-item" id="mnav-stats" onclick="gotoPage('stats',this);setMobileNav('stats')">
+  <button class="mobile-nav-item active" id="mnav-stats" onclick="gotoPage('stats',this);setMobileNav('stats')">
     <span class="mn-icon">📊</span><span>統計</span>
   </button>
   <button class="mobile-nav-item" id="mnav-budget" onclick="gotoPage('budget',this);setMobileNav('budget')">
     <span class="mn-icon">💰</span><span>預算</span>
   </button>
-  <button class="mobile-nav-item active" id="mnav-input" onclick="gotoPage('input',this);setMobileNav('input')">
+  <button class="mobile-nav-item" id="mnav-input" onclick="gotoPage('input',this);setMobileNav('input')">
     <span class="mn-icon">✏️</span><span>輸入</span>
   </button>
   <button class="mobile-nav-item" id="mnav-history" onclick="gotoPage('history',this);setMobileNav('history')">
@@ -1028,8 +1043,8 @@ updateBudget();
 
 // 啟動時自動從 Sheets 同步
 syncFromSheets();
-// 初始化 topbar 按鈕
-updateTopbarActions('input');
+// 初始化頁面為數據統計
+gotoPageDirect('stats');
 
 // ── Month key helper ──
 function monthKey(y, m) { return `${y}-${String(m).padStart(2,'0')}`; }
@@ -1088,8 +1103,8 @@ function updateMonthDisplay() {
   const statsActive   = document.getElementById('page-stats')?.classList.contains('active');
   const budgetActive  = document.getElementById('page-budget')?.classList.contains('active');
   const curPage = historyActive?'history':statsActive?'stats':budgetActive?'budget':'input';
-  const titles = {input:`每日輸入｜${label}`, history:`歷史記錄｜${label}`, stats:`數據統計｜${label}`, budget:`預算分配｜${label}`};
-  document.getElementById('page-title').textContent = titles[curPage]||`每日輸入｜${label}`;
+  const titles = {input:`手動輸入｜${label}`, history:`歷史記錄｜${label}`, stats:`數據統計｜${label}`, budget:`預算分配｜${label}`};
+  document.getElementById('page-title').textContent = titles[curPage]||`手動輸入｜${label}`;
 
   // 更新歷史/統計月份篩選
   if(historyActive) { populateMonthFilter('history-filter'); renderHistory(); }
@@ -1148,7 +1163,7 @@ function gotoPage(id, btn) {
   const navBtn = document.getElementById('nav-'+id);
   if(navBtn) navBtn.classList.add('active');
   const label = `${currentYear}年${currentMonth}月`;
-  const titles = {input:`每日輸入｜${label}`, history:`歷史記錄｜${label}`, stats:`數據統計｜${label}`, budget:`預算分配｜${label}`};
+  const titles = {input:`手動輸入｜${label}`, history:`歷史記錄｜${label}`, stats:`數據統計｜${label}`, budget:`預算分配｜${label}`};
   document.getElementById('page-title').textContent = titles[id]||'';
   updateTopbarActions(id);
   if(id==='budget') renderBudgetPage();
@@ -1160,7 +1175,7 @@ function gotoPageDirect(id) {
   const activeNav = document.getElementById('nav-'+id);
   if(activeNav) activeNav.classList.add('active');
   const label = `${currentYear}年${currentMonth}月`;
-  const titles = {input:`每日輸入｜${label}`, history:`歷史記錄｜${label}`, stats:`數據統計｜${label}`, budget:`預算分配｜${label}`};
+  const titles = {input:`手動輸入｜${label}`, history:`歷史記錄｜${label}`, stats:`數據統計｜${label}`, budget:`預算分配｜${label}`};
   document.getElementById('page-title').textContent = titles[id]||'';
   updateTopbarActions(id);
 }
@@ -1562,7 +1577,8 @@ function renderStats(forceMonth) {
   const avgCtr  = tot.totalImp>0   ? tot.totalClick/tot.totalImp : 0;
 
   // ── KPI cards ──
-  document.getElementById('stats-kpi').innerHTML = `
+  const kpiEl = document.getElementById('stats-kpi');
+  kpiEl.innerHTML = `
     <div class="kpi-card k-spend"><div class="kpi-lbl">月總花費</div><div class="kpi-val">$${Math.round(tot.spend).toLocaleString()}</div><div class="kpi-sub">${rows.length} 天記錄</div></div>
     <div class="kpi-card k-rev"><div class="kpi-lbl">廣告帶入業績</div><div class="kpi-val">$${Math.round(tot.rev).toLocaleString()}</div><div class="kpi-sub">關鍵字 + 推薦廣告</div></div>
     <div class="kpi-card k-roas"><div class="kpi-lbl">月均 ROAS</div><div class="kpi-val">${avgRoas>0?avgRoas.toFixed(2)+'x':'—'}</div><div class="kpi-sub">目標 ≥ 5x</div></div>
@@ -2539,7 +2555,6 @@ function updateTopbarActions(page) {
   if(page === 'input') {
     if(datePill) datePill.style.display = '';
     actions.innerHTML = `
-      <button class="btn btn-ghost" onclick="openMonthModal()">切換月份</button>
       <button class="btn btn-ghost" onclick="clearAll()">清除</button>
       <button class="btn btn-primary" onclick="saveRecord()">💾 儲存</button>`;
   } else if(page === 'history') {
@@ -2551,16 +2566,15 @@ function updateTopbarActions(page) {
     setTimeout(()=>{ populateMonthFilter('history-filter'); renderHistory(); }, 50);
   } else if(page === 'stats') {
     if(datePill) datePill.style.display = 'none';
-    actions.innerHTML = `
-      <select class="month-filter-select" id="stats-filter" onchange="renderStats()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);"></select>
-      <button class="btn btn-ghost" onclick="captureStats()" style="font-size:12px;">📷 截圖</button>`;
-    setTimeout(()=>{ populateMonthFilter('stats-filter'); renderStats(); }, 50);
+    actions.innerHTML = `<button class="btn btn-ghost mobile-show" onclick="captureStats()" style="font-size:12px;display:none;">📷 截圖</button>`;
+    const captureRow = document.getElementById('stats-capture-row');
+    if(captureRow) captureRow.style.display = window.innerWidth > 768 ? 'flex' : 'none';
+    const mobileCapture = document.querySelector('#topbar-actions .mobile-show');
+    if(mobileCapture) mobileCapture.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+    setTimeout(()=>{ renderStats(); }, 50);
   } else if(page === 'budget') {
     if(datePill) datePill.style.display = 'none';
-    actions.innerHTML = `
-      <button class="btn btn-ghost" onclick="autoFillBudget()" style="font-size:12px;">⚡ 自動建議</button>
-      <button class="btn btn-ghost" onclick="exportBudgetCSV()" style="font-size:12px;">⬇ 匯出</button>
-      <button class="btn btn-primary" onclick="saveBudgetPlan()">💾 儲存</button>`;
+    actions.innerHTML = '';
   }
 }
 
