@@ -1031,6 +1031,11 @@ async function syncFromSheets() {
   localStorage.setItem('momo_ad_records', JSON.stringify(local));
   recalcCumulative();
   showToast('✓ 已從 Google Sheets 同步 '+Object.keys(rows).length+' 筆資料');
+
+  // 如果數據統計頁面開著，自動刷新
+  if(document.getElementById('page-stats')?.classList.contains('active')) {
+    renderStats(monthKey(currentYear, currentMonth));
+  }
 }
 
 // ── Init ──
@@ -1089,6 +1094,7 @@ function onMonthChange() {
   clearInputs();
   if(document.getElementById('page-budget')?.classList.contains('active')) renderBudgetPage();
   if(document.getElementById('page-stats')?.classList.contains('active')) renderStats(monthKey(currentYear, currentMonth));
+  if(document.getElementById('page-history')?.classList.contains('active')) renderHistory();
 }
 function updateMonthDisplay() {
   const label = `${currentYear}年${currentMonth}月`;
@@ -1297,6 +1303,11 @@ function saveRecord() {
   saveMonthSettings();
   updateBudget();
   showToast('✓ 已儲存 '+date+'｜累計 $'+Math.round(monthTotal).toLocaleString());
+
+  // 如果數據統計頁面開著，自動刷新 AI 摘要
+  if(document.getElementById('page-stats')?.classList.contains('active')) {
+    renderStats(monthKey(currentYear, currentMonth));
+  }
 
   // 同步到 Google Sheets（背景執行，不阻塞 UI）
   gasPost({ action: 'save', record: recToSheetRow(date, rec) })
@@ -1516,27 +1527,52 @@ function renderStats(forceMonth) {
   const filterEl = document.getElementById('stats-filter');
   const all = getAllRecords();
 
-  // Populate month options if element exists
+  // 永遠以當前月份為預設
+  const cur = forceMonth || (filterEl?.value) || monthKey(currentYear, currentMonth);
   const months = [...new Set(Object.keys(all).map(k=>k.slice(0,7)))].sort().reverse();
-  const cur = forceMonth || (filterEl ? filterEl.value : monthKey(currentYear, currentMonth));
+
   if(filterEl) {
-    filterEl.innerHTML = '<option value="">— 選擇月份 —</option>' +
-      months.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m.replace('-','年')}月</option>`).join('');
-    if(!filterEl.value && months.length) {
-      const def = monthKey(currentYear, currentMonth);
-      if(months.includes(def)) filterEl.value = def;
-      else filterEl.value = months[0];
-    }
+    filterEl.innerHTML = months.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m.replace('-','年')}月</option>`).join('');
+    // 若當前月份不在選單，仍然設定
+    if(!filterEl.value) filterEl.value = cur;
   }
 
-  const filter = filterEl ? filterEl.value : cur;
+  const filter = cur;
   const emptyEl = document.getElementById('stats-empty');
 
-  if(!filter) { emptyEl.style.display='block'; document.getElementById('stats-kpi').innerHTML=''; return; }
-  emptyEl.style.display='none';
+  const clearStats = () => {
+    // 保留格子結構，清空數值
+    document.getElementById('stats-kpi').innerHTML = `
+      <div class="kpi-card k-spend"><div class="kpi-lbl">月總花費</div><div class="kpi-val">—</div><div class="kpi-sub">尚無記錄</div></div>
+      <div class="kpi-card k-rev"><div class="kpi-lbl">廣告帶入業績</div><div class="kpi-val">—</div><div class="kpi-sub">關鍵字 + 推薦廣告</div></div>
+      <div class="kpi-card k-roas"><div class="kpi-lbl">月均 ROAS</div><div class="kpi-val">—</div><div class="kpi-sub">目標 ≥ 5x</div></div>
+      <div class="kpi-card k-orders"><div class="kpi-lbl">月總訂單</div><div class="kpi-val">—</div><div class="kpi-sub">—</div></div>
+      <div class="kpi-card k-imp"><div class="kpi-lbl">月總曝光數</div><div class="kpi-val">—</div><div class="kpi-sub">關鍵字 + 推薦廣告</div></div>
+      <div class="kpi-card k-cpc"><div class="kpi-lbl">月均 CPC</div><div class="kpi-val">—</div><div class="kpi-sub">關鍵字 + 推薦廣告</div></div>
+      <div class="kpi-card k-cpm"><div class="kpi-lbl">月均 CPM</div><div class="kpi-val">—</div><div class="kpi-sub">關鍵字 + 推薦廣告</div></div>
+      <div class="kpi-card k-cpa"><div class="kpi-lbl">月均 CPA</div><div class="kpi-val">—</div><div class="kpi-sub">關鍵字 + 推薦廣告</div></div>
+      <div class="kpi-card k-ctr"><div class="kpi-lbl">月均點擊率</div><div class="kpi-val">—</div><div class="kpi-sub">關鍵字 + 推薦廣告</div></div>`;
+    document.getElementById('stats-mom-summary').innerHTML = '';
+    document.getElementById('stats-detail-body').innerHTML = '';
+    // 清除圖表 - 先 destroy 再替換 canvas
+    [['sr','chart-spend-rev'],['pie','chart-spend-pie'],['roas','chart-roas'],['cpc','chart-cpc'],['ord','chart-orders']].forEach(([key,id]) => {
+      destroyChart(key);
+      const canvas = document.getElementById(id);
+      if(canvas) {
+        const newCanvas = document.createElement('canvas');
+        newCanvas.id = id;
+        newCanvas.setAttribute('role', 'img');
+        canvas.parentNode.replaceChild(newCanvas, canvas);
+      }
+    });
+    if(emptyEl) emptyEl.style.display = 'none';
+  };
+
+  if(!filter) { clearStats(); return; }
+  if(emptyEl) emptyEl.style.display = 'none';
 
   const keys = Object.keys(all).filter(k=>k.startsWith(filter)).sort();
-  if(!keys.length) { emptyEl.style.display='block'; document.getElementById('stats-kpi').innerHTML=''; return; }
+  if(!keys.length) { clearStats(); return; }
 
   const rows = keys.map(k => {
     const r = all[k];
@@ -1575,21 +1611,52 @@ function renderStats(forceMonth) {
   const avgCpa  = tot.orders>0     ? tot.spend/tot.orders : 0;
   const avgCtr  = tot.totalImp>0   ? tot.totalClick/tot.totalImp : 0;
 
+  // ── 計算上月數據 ──
+  const [cy, cm] = filter.split('-').map(Number);
+  const prevM = cm===1 ? 12 : cm-1;
+  const prevY = cm===1 ? cy-1 : cy;
+  const prevKey2 = monthKey(prevY, prevM);
+  const allRec = getAllRecords();
+  const prevKeys2 = Object.keys(allRec).filter(k=>k.startsWith(prevKey2));
+  let prevTot = null;
+  if(prevKeys2.length) {
+    const p = prevKeys2.reduce((a,k)=>{
+      const r=allRec[k];
+      return { spend:a.spend+getKwSpend(r)+(r.rec?.spend||0), rev:a.rev+getKwField(r,'rev')+(r.rec?.rev||0),
+               orders:a.orders+getKwField(r,'orders')+(r.rec?.orders||0),
+               click:a.click+getKwField(r,'click')+(r.rec?.click||0), imp:a.imp+getKwField(r,'imp')+(r.rec?.imp||0) };
+    }, {spend:0,rev:0,orders:0,click:0,imp:0});
+    prevTot = { spend:p.spend, rev:p.rev, orders:p.orders,
+      roas:p.spend>0?p.rev/p.spend:0, cpc:p.click>0?p.spend/p.click:0,
+      cpm:p.imp>0?(p.spend/p.imp)*1000:0, cpa:p.orders>0?p.spend/p.orders:0,
+      ctr:p.imp>0?p.click/p.imp:0, imp:p.imp };
+  }
+
+  // 成長率標籤
+  const momTag = (cur, prev, inverse=false) => {
+    if(!prevTot || prev===0) return '';
+    const pct = ((cur-prev)/prev*100);
+    const isGood = inverse ? pct<0 : pct>0;
+    const cls = isGood ? 'color:#15803D;' : 'color:#DC2626;';
+    const arrow = pct>0 ? '▲' : '▼';
+    return `<span style="font-size:11px;font-family:var(--mono);${cls}margin-left:6px;">${arrow}${Math.abs(pct).toFixed(1)}%</span>`;
+  };
+
   // ── KPI cards ──
   const kpiEl = document.getElementById('stats-kpi');
   kpiEl.innerHTML = `
-    <div class="kpi-card k-spend"><div class="kpi-lbl">月總花費</div><div class="kpi-val">$${Math.round(tot.spend).toLocaleString()}</div><div class="kpi-sub">${rows.length} 天記錄</div></div>
-    <div class="kpi-card k-rev"><div class="kpi-lbl">廣告帶入業績</div><div class="kpi-val">$${Math.round(tot.rev).toLocaleString()}</div><div class="kpi-sub">關鍵字 + 推薦廣告</div></div>
-    <div class="kpi-card k-roas"><div class="kpi-lbl">月均 ROAS</div><div class="kpi-val">${avgRoas>0?avgRoas.toFixed(2)+'x':'—'}</div><div class="kpi-sub">目標 ≥ 5x</div></div>
-    <div class="kpi-card k-orders"><div class="kpi-lbl">月總訂單</div><div class="kpi-val">${tot.orders}筆</div><div class="kpi-sub">日均 ${(tot.orders/rows.length).toFixed(1)} 筆</div></div>
-    <div class="kpi-card k-imp"><div class="kpi-lbl">月總曝光數</div><div class="kpi-val">${tot.totalImp>0?tot.totalImp.toLocaleString():'—'}</div><div class="kpi-sub">關鍵字 + 推薦廣告</div></div>
-    <div class="kpi-card k-cpc"><div class="kpi-lbl">月均 CPC</div><div class="kpi-val">${avgCpc>0?'$'+Math.round(avgCpc):'—'}</div><div class="kpi-sub">關鍵字 + 推薦廣告</div></div>
-    <div class="kpi-card k-cpm"><div class="kpi-lbl">月均 CPM</div><div class="kpi-val">${avgCpm>0?'$'+Math.round(avgCpm):'—'}</div><div class="kpi-sub">關鍵字 + 推薦廣告</div></div>
-    <div class="kpi-card k-cpa"><div class="kpi-lbl">月均 CPA</div><div class="kpi-val">${avgCpa>0?'$'+Math.round(avgCpa):'—'}</div><div class="kpi-sub">關鍵字 + 推薦廣告</div></div>
-    <div class="kpi-card k-ctr"><div class="kpi-lbl">月均點擊率</div><div class="kpi-val">${avgCtr>0?(avgCtr*100).toFixed(2)+'%':'—'}</div><div class="kpi-sub">關鍵字 + 推薦廣告</div></div>`;
+    <div class="kpi-card k-spend"><div class="kpi-lbl">月總花費</div><div class="kpi-val">$${Math.round(tot.spend).toLocaleString()}${momTag(tot.spend,prevTot?.spend,true)}</div><div class="kpi-sub">${rows.length} 天記錄${prevTot?` ｜ 上月 $${Math.round(prevTot.spend).toLocaleString()}`:''}</div></div>
+    <div class="kpi-card k-rev"><div class="kpi-lbl">廣告帶入業績</div><div class="kpi-val">$${Math.round(tot.rev).toLocaleString()}${momTag(tot.rev,prevTot?.rev)}</div><div class="kpi-sub">關鍵字 + 推薦廣告${prevTot?` ｜ 上月 $${Math.round(prevTot.rev).toLocaleString()}`:''}</div></div>
+    <div class="kpi-card k-roas"><div class="kpi-lbl">月均 ROAS</div><div class="kpi-val">${avgRoas>0?avgRoas.toFixed(2)+'x':'—'}${momTag(avgRoas,prevTot?.roas)}</div><div class="kpi-sub">目標 ≥ 5x${prevTot?` ｜ 上月 ${prevTot.roas.toFixed(2)}x`:''}</div></div>
+    <div class="kpi-card k-orders"><div class="kpi-lbl">月總訂單</div><div class="kpi-val">${tot.orders}筆${momTag(tot.orders,prevTot?.orders)}</div><div class="kpi-sub">日均 ${(tot.orders/rows.length).toFixed(1)} 筆${prevTot?` ｜ 上月 ${prevTot.orders}筆`:''}</div></div>
+    <div class="kpi-card k-imp"><div class="kpi-lbl">月總曝光數</div><div class="kpi-val">${tot.totalImp>0?tot.totalImp.toLocaleString():'—'}${momTag(tot.totalImp,prevTot?.imp)}</div><div class="kpi-sub">關鍵字 + 推薦廣告${prevTot?` ｜ 上月 ${prevTot.imp.toLocaleString()}`:''}</div></div>
+    <div class="kpi-card k-cpc"><div class="kpi-lbl">月均 CPC</div><div class="kpi-val">${avgCpc>0?'$'+Math.round(avgCpc):'—'}${momTag(avgCpc,prevTot?.cpc,true)}</div><div class="kpi-sub">關鍵字 + 推薦廣告${prevTot?` ｜ 上月 $${Math.round(prevTot.cpc)}`:''}</div></div>
+    <div class="kpi-card k-cpm"><div class="kpi-lbl">月均 CPM</div><div class="kpi-val">${avgCpm>0?'$'+Math.round(avgCpm):'—'}${momTag(avgCpm,prevTot?.cpm,true)}</div><div class="kpi-sub">關鍵字 + 推薦廣告${prevTot?` ｜ 上月 $${Math.round(prevTot.cpm)}`:''}</div></div>
+    <div class="kpi-card k-cpa"><div class="kpi-lbl">月均 CPA</div><div class="kpi-val">${avgCpa>0?'$'+Math.round(avgCpa):'—'}${momTag(avgCpa,prevTot?.cpa,true)}</div><div class="kpi-sub">關鍵字 + 推薦廣告${prevTot?` ｜ 上月 $${Math.round(prevTot.cpa)}`:''}</div></div>
+    <div class="kpi-card k-ctr"><div class="kpi-lbl">月均點擊率</div><div class="kpi-val">${avgCtr>0?(avgCtr*100).toFixed(2)+'%':'—'}${momTag(avgCtr,prevTot?.ctr)}</div><div class="kpi-sub">關鍵字 + 推薦廣告${prevTot?` ｜ 上月 ${(prevTot.ctr*100).toFixed(2)}%`:''}</div></div>`;
 
   // ── MoM comparison ──
-  renderMomSummary(filter, tot, avgRoas, avgCpc, avgCpm, avgCpa, avgCtr, rows.length);
+  renderMomSummary(filter, tot, avgRoas, avgCpc, avgCpm, avgCpa, avgCtr, rows.length, prevTot, prevKeys2.length);
 
   const labels = rows.map(r=>r.date);
   const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
@@ -2265,7 +2332,7 @@ function exportBudgetCSV() {
 }
 
 // ── MoM comparison ──
-function renderMomSummary(filter, cur, curRoas, curCpc, curCpm, curCpa, curCtr, curDays) {
+function renderMomSummary(filter, cur, curRoas, curCpc, curCpm, curCpa, curCtr, curDays, prevTotIn, prevDays) {
   const el = document.getElementById('stats-mom-summary');
   if(!el) return;
 
@@ -2369,18 +2436,79 @@ function renderMomSummary(filter, cur, curRoas, curCpc, curCpm, curCpa, curCtr, 
 
   el.innerHTML = `<div class="mom-card">
     <div class="mom-header">
-      <h3>與上月比較</h3>
-      <span class="mom-period">${prevY}年${prevM}月（${prevKeys.length}天）vs ${y}年${m}月（${curDays}天）</span>
+      <h3>✨ AI 重點摘要</h3>
+      <span class="mom-period">${prevY}年${prevM}月 vs ${y}年${m}月</span>
     </div>
-    <div class="mom-summary-text">${sentences.join('<br>')}</div>
-    <div class="mom-chips">${chips.map(c=>`
-      <div class="mom-chip">
-        <span class="chip-label">${c.label}</span>
-        <span class="chip-val">${c.cur}</span>
-        <span class="chip-chg">${c.chg}</span>
-      </div>`).join('')}
+    <div id="ai-summary-content" style="font-size:13px;line-height:1.8;color:var(--text);min-height:60px;">
+      <span style="color:var(--text3);font-size:12px;">AI 正在分析廣告數據...</span>
     </div>
   </div>`;
+  // 自動產生摘要
+  generateAISummary('${filter}');
+}
+
+// ── AI 重點摘要 ──
+async function generateAISummary(filter) {
+  const content = document.getElementById('ai-summary-content');
+  if(!content) return;
+
+  content.innerHTML = '<span style="color:var(--text3);font-size:12px;">✨ AI 正在分析廣告數據...</span>';
+
+  const all = getAllRecords();
+  const keys = Object.keys(all).filter(k=>k.startsWith(filter)).sort();
+  if(!keys.length) { content.innerHTML = '<span style="color:var(--text3);">尚無資料可分析</span>'; return; }
+
+  const rows = keys.map(k=>{
+    const r=all[k];
+    const ks=getKwSpend(r), kr=getKwField(r,'rev'), ko=getKwField(r,'orders');
+    const rs=r.rec?.spend||0, rr=r.rec?.rev||0, ro=r.rec?.orders||0;
+    return { date:k.slice(5), spend:ks+rs, rev:kr+rr, orders:ko+ro };
+  });
+  const tot = rows.reduce((a,r)=>({spend:a.spend+r.spend,rev:a.rev+r.rev,orders:a.orders+r.orders}),{spend:0,rev:0,orders:0});
+  const roas = tot.spend>0 ? (tot.rev/tot.spend).toFixed(2) : 0;
+  const cpa  = tot.orders>0 ? Math.round(tot.spend/tot.orders) : 0;
+
+  const [cy,cm] = filter.split('-').map(Number);
+  const pm=cm===1?12:cm-1, py=cm===1?cy-1:cy;
+  const prevKeys = Object.keys(all).filter(k=>k.startsWith(monthKey(py,pm)));
+  let prevStr = '無上月資料';
+  if(prevKeys.length) {
+    const pt = prevKeys.reduce((a,k)=>{const r=all[k];return{spend:a.spend+getKwSpend(r)+(r.rec?.spend||0),rev:a.rev+getKwField(r,'rev')+(r.rec?.rev||0),orders:a.orders+getKwField(r,'orders')+(r.rec?.orders||0)};},{spend:0,rev:0,orders:0});
+    prevStr = `花費 $${Math.round(pt.spend).toLocaleString()}，業績 $${Math.round(pt.rev).toLocaleString()}，ROAS ${pt.spend>0?(pt.rev/pt.spend).toFixed(2):0}x，訂單 ${pt.orders} 筆`;
+  }
+
+  const prompt = `你是一位電商廣告分析師，請根據以下 MOMO 廣告數據，用繁體中文寫出 3~5 個重點摘要（每點一行，用 • 開頭），重點放在業績表現、廣告效益、費用效率，並給出一個簡短建議。
+
+當月（${filter.replace('-','年')}月）數據：
+- 總花費：$${Math.round(tot.spend).toLocaleString()}
+- 廣告業績：$${Math.round(tot.rev).toLocaleString()}
+- ROAS：${roas}x
+- 訂單數：${tot.orders} 筆
+- CPA：$${cpa}
+- 記錄天數：${rows.length} 天
+
+上月數據：${prevStr}
+
+請直接輸出摘要重點，不要有多餘說明。`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    const text = data.content?.[0]?.text || '無法取得摘要';
+    content.innerHTML = text.split('\n').filter(l=>l.trim()).map(l =>
+      `<div style="padding:4px 0;">${l}</div>`
+    ).join('');
+  } catch(e) {
+    content.innerHTML = '<span style="color:var(--text3);">摘要產生失敗，請重新整理再試</span>';
+  }
 }
 
 // ── Stats Screenshot ──
@@ -2388,7 +2516,7 @@ async function captureStats() {
   const btn = document.querySelector('#topbar-actions button[onclick*="captureStats"]') ||
                document.getElementById('capture-btn') ||
                { textContent:'📷 截圖', disabled:false };
-  const filter = document.getElementById('stats-filter')?.value;
+  const filter = document.getElementById('stats-filter')?.value || monthKey(currentYear, currentMonth);
   if(!filter){ showToast('請先選擇月份'); return; }
 
   btn.textContent = '⏳ 截圖中...';
@@ -2548,7 +2676,7 @@ async function captureStats() {
 function updateTopbarActions(page) {
   const actions = document.getElementById('topbar-actions');
   const datePill = document.getElementById('topbar-date-pill');
-  const monthKey = `${currentYear}年${currentMonth}月`;
+  const monthLabel = `${currentYear}年${currentMonth}月`;
   if(!actions) return;
 
   const monthBadge = document.getElementById('topbar-month');
@@ -2569,14 +2697,13 @@ function updateTopbarActions(page) {
     setTimeout(()=>{ populateMonthFilter('history-filter'); renderHistory(); }, 50);
   } else if(page === 'stats') {
     if(datePill) datePill.style.display = 'none';
-    const monthBadge = document.getElementById('topbar-month');
     if(monthBadge) monthBadge.style.display = '';
     actions.innerHTML = `<button class="btn btn-ghost mobile-show" onclick="captureStats()" style="font-size:12px;display:none;">📷 截圖</button>`;
     const captureRow = document.getElementById('stats-capture-row');
     if(captureRow) captureRow.style.display = window.innerWidth > 768 ? 'flex' : 'none';
     const mobileCapture = document.querySelector('#topbar-actions .mobile-show');
     if(mobileCapture) mobileCapture.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
-    setTimeout(()=>{ renderStats(); }, 50);
+    setTimeout(()=>{ renderStats(monthKey(currentYear, currentMonth)); }, 50);
   } else if(page === 'budget') {
     if(datePill) datePill.style.display = 'none';
     if(monthBadge) monthBadge.style.display = 'none';
