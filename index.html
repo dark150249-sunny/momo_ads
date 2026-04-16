@@ -89,7 +89,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
 .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text2);}
 .btn-ghost:hover{background:var(--surface2);}
 
-.content{padding:28px 32px 60px;max-width:1400px;margin:0 auto;}
+.content{padding:28px 32px 60px;max-width:1400px;margin:0 auto;width:100%;box-sizing:border-box;}
 
 /* Budget strip */
 .budget-strip{background:var(--text);border-radius:var(--radius-lg);padding:18px 24px;margin-bottom:24px;display:flex;align-items:center;gap:28px;flex-wrap:wrap;color:#fff;}
@@ -476,7 +476,6 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
   background:transparent;transition:all .15s;min-width:56px;
 }
 .mobile-nav-item .mn-icon{font-size:20px;}
-@media(max-width:768px){ #stats-capture-row{display:none !important;} }
 .mobile-nav-item.active{color:#fff;}
 .mobile-nav-item.active .mn-icon{transform:scale(1.15);}
 /* 手機版月份快捷列 */
@@ -595,7 +594,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
   <div class="topbar" id="main-topbar">
     <div class="topbar-left">
       <h1 id="page-title">手動輸入｜—</h1>
-      <div class="month-badge" id="topbar-month" style="display:none;">📅 —</div>
+      <div class="month-badge" id="topbar-month" onclick="openMonthModal()" style="cursor:pointer;display:none;" title="切換月份">📅 —</div>
       <div class="date-pill" id="topbar-date-pill">
         <span>日期</span>
         <input type="date" id="record-date" onchange="onDateChange(this.value)">
@@ -712,7 +711,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
     <div class="page-section" id="page-stats">
 
       <!-- 截圖分享按鈕（電腦版顯示在這裡，月均ROAS上方） -->
-      <div id="stats-capture-row" style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+      <div id="stats-capture-row" style="display:none;justify-content:flex-end;margin-bottom:12px;">
         <button class="btn btn-ghost" onclick="captureStats()" style="font-size:12px;">📷 截圖分享</button>
       </div>
 
@@ -2552,13 +2551,17 @@ function updateTopbarActions(page) {
   const monthKey = `${currentYear}年${currentMonth}月`;
   if(!actions) return;
 
+  const monthBadge = document.getElementById('topbar-month');
+
   if(page === 'input') {
     if(datePill) datePill.style.display = '';
+    if(monthBadge) monthBadge.style.display = 'none';
     actions.innerHTML = `
       <button class="btn btn-ghost" onclick="clearAll()">清除</button>
       <button class="btn btn-primary" onclick="saveRecord()">💾 儲存</button>`;
   } else if(page === 'history') {
     if(datePill) datePill.style.display = 'none';
+    if(monthBadge) monthBadge.style.display = 'none';
     actions.innerHTML = `
       <select class="month-filter-select" id="history-filter" onchange="renderHistory()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);"></select>
       <button class="btn btn-ghost" onclick="exportCSV()" style="font-size:12px;">⬇ 匯出</button>
@@ -2566,6 +2569,8 @@ function updateTopbarActions(page) {
     setTimeout(()=>{ populateMonthFilter('history-filter'); renderHistory(); }, 50);
   } else if(page === 'stats') {
     if(datePill) datePill.style.display = 'none';
+    const monthBadge = document.getElementById('topbar-month');
+    if(monthBadge) monthBadge.style.display = '';
     actions.innerHTML = `<button class="btn btn-ghost mobile-show" onclick="captureStats()" style="font-size:12px;display:none;">📷 截圖</button>`;
     const captureRow = document.getElementById('stats-capture-row');
     if(captureRow) captureRow.style.display = window.innerWidth > 768 ? 'flex' : 'none';
@@ -2574,6 +2579,7 @@ function updateTopbarActions(page) {
     setTimeout(()=>{ renderStats(); }, 50);
   } else if(page === 'budget') {
     if(datePill) datePill.style.display = 'none';
+    if(monthBadge) monthBadge.style.display = 'none';
     actions.innerHTML = '';
   }
 }
