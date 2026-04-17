@@ -252,6 +252,24 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
 .kpi-card .kpi-lbl{font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
 .kpi-card .kpi-val{font-size:20px;font-weight:700;font-family:var(--mono);color:var(--text);}
 .kpi-card .kpi-sub{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:3px;}
+.kpi-card .kpi-progress{margin-top:8px;height:4px;background:var(--border);border-radius:99px;overflow:hidden;}
+.kpi-card .kpi-progress-bar{height:100%;border-radius:99px;transition:width .5s;}
+.kpi-card .kpi-achieve{font-size:10px;font-family:var(--mono);margin-top:4px;}
+.trend-period-btn{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 14px;font-size:12px;font-family:var(--mono);cursor:pointer;color:var(--text2);transition:all .15s;}
+.trend-period-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+.report-tabs{display:flex;gap:0;margin-bottom:18px;border:1px solid var(--border);border-radius:10px;overflow:hidden;width:fit-content;}
+.report-tab{background:transparent;border:none;padding:8px 24px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);transition:all .15s;font-family:var(--sans);}
+.report-tab:not(:last-child){border-right:1px solid var(--border);}
+.report-tab.active{background:var(--accent);color:#fff;}
+.report-panel{}
+/* Goals setting bar */
+.goals-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.goals-bar-title{font-size:11px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;}
+.goal-field{display:flex;flex-direction:column;gap:3px;flex:1;min-width:100px;}
+.goal-field label{font-size:10px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;}
+.goal-field input{font-family:var(--mono);font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;padding:5px 8px;background:var(--surface2);color:var(--text);outline:none;width:100%;}
+.goal-field input:focus{border-color:var(--accent);}
+@media(max-width:768px){.goals-bar{gap:10px;}.goal-field{min-width:calc(50% - 10px);}}
 .kpi-card.k-spend{border-top:3px solid #378ADD;}
 .kpi-card.k-rev{border-top:3px solid #1D9E75;}
 .kpi-card.k-roas{border-top:3px solid #EF9F27;}
@@ -374,7 +392,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
   .topbar-right .btn-ghost{display:none;}
   .topbar-right .btn-ghost.mobile-show{display:flex;}
   .topbar .date-pill{display:none;}
-  .topbar .month-badge{display:none;}
+  .topbar .month-badge{font-size:11px;padding:3px 10px;}
 
   /* 預算進度條：改成2行排列避免數字被遮 */
   .budget-strip{
@@ -525,6 +543,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
   <div class="nav-section">
     <div class="nav-label">分析</div>
     <button class="nav-item" id="nav-stats" onclick="gotoPage('stats',this)"><span class="icon">📊</span> 數據統計</button>
+    <button class="nav-item" id="nav-trend" onclick="gotoPage('trend',this)"><span class="icon">📈</span> 跨月趨勢</button>
     <button class="nav-item" id="nav-budget" onclick="gotoPage('budget',this)"><span class="icon">💰</span> 預算分配</button>
   </div>
 
@@ -705,12 +724,154 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
       </div>
     </div>
 
+    <!-- TREND PAGE -->
+    <div class="page-section" id="page-trend">
+      <!-- 報表分頁 -->
+      <div class="report-tabs">
+        <button class="report-tab active" id="rtab-month" onclick="setReportTab('month',this)">月報</button>
+        <button class="report-tab" id="rtab-quarter" onclick="setReportTab('quarter',this)">季報</button>
+        <button class="report-tab" id="rtab-year" onclick="setReportTab('year',this)">年報</button>
+      </div>
+
+      <!-- 月報 -->
+      <div id="report-month" class="report-panel">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <span style="font-size:12px;color:var(--text3);font-family:var(--mono);">顯示最近</span>
+          <button class="trend-period-btn active" onclick="setTrendPeriod(3,this)">3個月</button>
+          <button class="trend-period-btn" onclick="setTrendPeriod(6,this)">6個月</button>
+          <button class="trend-period-btn" onclick="setTrendPeriod(12,this)">12個月</button>
+        </div>
+        <div class="stats-card" style="margin-bottom:14px;">
+          <div class="stats-card-title">花費 vs 業績（月）</div>
+          <div style="position:relative;height:240px;"><canvas id="trend-chart-rev"></canvas></div>
+        </div>
+        <div class="stats-charts-row" style="margin-bottom:14px;">
+          <div class="stats-card" style="flex:1;">
+            <div class="stats-card-title">月均 ROAS</div>
+            <div style="position:relative;height:180px;"><canvas id="trend-chart-roas"></canvas></div>
+          </div>
+          <div class="stats-card" style="flex:1;">
+            <div class="stats-card-title">月均 CPA</div>
+            <div style="position:relative;height:180px;"><canvas id="trend-chart-cpa"></canvas></div>
+          </div>
+        </div>
+        <div class="stats-charts-row" style="margin-bottom:14px;">
+          <div class="stats-card" style="flex:1;">
+            <div class="stats-card-title">月總訂單</div>
+            <div style="position:relative;height:180px;"><canvas id="trend-chart-orders"></canvas></div>
+          </div>
+          <div class="stats-card" style="flex:1;">
+            <div class="stats-card-title">月均點擊率</div>
+            <div style="position:relative;height:180px;"><canvas id="trend-chart-ctr"></canvas></div>
+          </div>
+        </div>
+        <!-- 月報與上月比較彙整表 -->
+        <div class="stats-card">
+          <div class="stats-card-title">月報彙整 ＋ 與上月比較</div>
+          <div style="overflow-x:auto;">
+            <table class="stats-table">
+              <thead><tr>
+                <th style="text-align:left;">月份</th>
+                <th>花費</th><th>花費↕</th>
+                <th>業績</th><th>業績↕</th>
+                <th>ROAS</th><th>ROAS↕</th>
+                <th>訂單</th><th>CPA</th>
+              </tr></thead>
+              <tbody id="trend-month-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 季報 -->
+      <div id="report-quarter" class="report-panel" style="display:none;">
+        <div class="stats-card" style="margin-bottom:14px;">
+          <div class="stats-card-title">花費 vs 業績（季）</div>
+          <div style="position:relative;height:240px;"><canvas id="trend-chart-q-rev"></canvas></div>
+        </div>
+        <div class="stats-charts-row" style="margin-bottom:14px;">
+          <div class="stats-card" style="flex:1;">
+            <div class="stats-card-title">季均 ROAS</div>
+            <div style="position:relative;height:180px;"><canvas id="trend-chart-q-roas"></canvas></div>
+          </div>
+          <div class="stats-card" style="flex:1;">
+            <div class="stats-card-title">季總訂單</div>
+            <div style="position:relative;height:180px;"><canvas id="trend-chart-q-orders"></canvas></div>
+          </div>
+        </div>
+        <div class="stats-card">
+          <div class="stats-card-title">季報彙整 ＋ 與上季比較</div>
+          <div style="overflow-x:auto;">
+            <table class="stats-table">
+              <thead><tr>
+                <th style="text-align:left;">季度</th>
+                <th>花費</th><th>花費↕</th>
+                <th>業績</th><th>業績↕</th>
+                <th>ROAS</th><th>ROAS↕</th>
+                <th>訂單</th><th>CPA</th>
+              </tr></thead>
+              <tbody id="trend-quarter-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 年報 -->
+      <div id="report-year" class="report-panel" style="display:none;">
+        <div class="stats-card" style="margin-bottom:14px;">
+          <div class="stats-card-title">花費 vs 業績（年）</div>
+          <div style="position:relative;height:240px;"><canvas id="trend-chart-y-rev"></canvas></div>
+        </div>
+        <div class="stats-charts-row" style="margin-bottom:14px;">
+          <div class="stats-card" style="flex:1;">
+            <div class="stats-card-title">年均 ROAS</div>
+            <div style="position:relative;height:180px;"><canvas id="trend-chart-y-roas"></canvas></div>
+          </div>
+          <div class="stats-card" style="flex:1;">
+            <div class="stats-card-title">年總訂單</div>
+            <div style="position:relative;height:180px;"><canvas id="trend-chart-y-orders"></canvas></div>
+          </div>
+        </div>
+        <div class="stats-card">
+          <div class="stats-card-title">年報彙整 ＋ 與上年比較</div>
+          <div style="overflow-x:auto;">
+            <table class="stats-table">
+              <thead><tr>
+                <th style="text-align:left;">年份</th>
+                <th>花費</th><th>花費↕</th>
+                <th>業績</th><th>業績↕</th>
+                <th>ROAS</th><th>ROAS↕</th>
+                <th>訂單</th><th>CPA</th>
+              </tr></thead>
+              <tbody id="trend-year-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- STATS PAGE -->
     <div class="page-section" id="page-stats">
 
       <!-- 截圖分享按鈕（電腦版顯示在這裡，月均ROAS上方） -->
       <div id="stats-capture-row" style="display:none;justify-content:flex-end;margin-bottom:12px;">
         <button class="btn btn-ghost" onclick="captureStats()" style="font-size:12px;">📷 截圖分享</button>
+      </div>
+
+      <!-- 目標設定 -->
+      <div class="goals-bar">
+        <div class="goal-field">
+          <label>月目標 ROAS</label>
+          <input type="number" id="goal-roas" placeholder="e.g. 5" step="0.1" oninput="saveGoals();renderStats()">
+        </div>
+        <div class="goal-field">
+          <label>月目標業績</label>
+          <input type="number" id="goal-rev" placeholder="e.g. 150000" oninput="saveGoals();renderStats()">
+        </div>
+        <div class="goal-field">
+          <label>月目標訂單數</label>
+          <input type="number" id="goal-orders" placeholder="e.g. 120" oninput="saveGoals();renderStats()">
+        </div>
       </div>
 
       <!-- KPI Cards -->
@@ -841,8 +1002,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
   <button class="mobile-nav-item active" id="mnav-stats" onclick="gotoPage('stats',this);setMobileNav('stats')">
     <span class="mn-icon">📊</span><span>統計</span>
   </button>
-  <button class="mobile-nav-item" id="mnav-budget" onclick="gotoPage('budget',this);setMobileNav('budget')">
-    <span class="mn-icon">💰</span><span>預算</span>
+  <button class="mobile-nav-item" id="mnav-trend" onclick="gotoPage('trend',this);setMobileNav('trend')">
+    <span class="mn-icon">📈</span><span>趨勢</span>
   </button>
   <button class="mobile-nav-item" id="mnav-input" onclick="gotoPage('input',this);setMobileNav('input')">
     <span class="mn-icon">✏️</span><span>輸入</span>
@@ -1047,6 +1208,7 @@ updateBudget();
 syncFromSheets();
 // 初始化頁面為數據統計
 gotoPageDirect('stats');
+loadGoals();
 
 // ── Month key helper ──
 function monthKey(y, m) { return `${y}-${String(m).padStart(2,'0')}`; }
@@ -1090,6 +1252,7 @@ function onMonthChange() {
   updateBudget();
   document.getElementById('record-date').value = `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`;
   clearInputs();
+  loadGoals();
   if(document.getElementById('page-budget')?.classList.contains('active')) renderBudgetPage();
   if(document.getElementById('page-stats')?.classList.contains('active')) renderStats(monthKey(currentYear, currentMonth));
   if(document.getElementById('page-history')?.classList.contains('active')) renderHistory();
@@ -1106,7 +1269,7 @@ function updateMonthDisplay() {
   const statsActive   = document.getElementById('page-stats')?.classList.contains('active');
   const budgetActive  = document.getElementById('page-budget')?.classList.contains('active');
   const curPage = historyActive?'history':statsActive?'stats':budgetActive?'budget':'input';
-  const titles = {input:`手動輸入｜${label}`, history:`歷史記錄｜${label}`, stats:`數據統計｜${label}`, budget:`預算分配｜${label}`};
+  const titles = {input:`手動輸入｜${label}`, history:`歷史記錄｜${label}`, stats:`數據統計｜${label}`, budget:`預算分配｜${label}`, trend:'跨月趨勢'};
   document.getElementById('page-title').textContent = titles[curPage]||`手動輸入｜${label}`;
 
   // 更新歷史/統計月份篩選
@@ -1166,7 +1329,7 @@ function gotoPage(id, btn) {
   const navBtn = document.getElementById('nav-'+id);
   if(navBtn) navBtn.classList.add('active');
   const label = `${currentYear}年${currentMonth}月`;
-  const titles = {input:`手動輸入｜${label}`, history:`歷史記錄｜${label}`, stats:`數據統計｜${label}`, budget:`預算分配｜${label}`};
+  const titles = {input:`手動輸入｜${label}`, history:`歷史記錄｜${label}`, stats:`數據統計｜${label}`, budget:`預算分配｜${label}`, trend:'跨月趨勢'};
   document.getElementById('page-title').textContent = titles[id]||'';
   updateTopbarActions(id);
   if(id==='budget') renderBudgetPage();
@@ -1178,7 +1341,7 @@ function gotoPageDirect(id) {
   const activeNav = document.getElementById('nav-'+id);
   if(activeNav) activeNav.classList.add('active');
   const label = `${currentYear}年${currentMonth}月`;
-  const titles = {input:`手動輸入｜${label}`, history:`歷史記錄｜${label}`, stats:`數據統計｜${label}`, budget:`預算分配｜${label}`};
+  const titles = {input:`手動輸入｜${label}`, history:`歷史記錄｜${label}`, stats:`數據統計｜${label}`, budget:`預算分配｜${label}`, trend:'跨月趨勢'};
   document.getElementById('page-title').textContent = titles[id]||'';
   updateTopbarActions(id);
 }
@@ -1640,13 +1803,28 @@ function renderStats(forceMonth) {
     return `<span style="font-size:11px;font-family:var(--mono);${cls}margin-left:6px;">${arrow}${Math.abs(pct).toFixed(1)}%</span>`;
   };
 
-  // ── KPI cards ──
+  // ── KPI cards with goal progress ──
+  const monthBudget = getMonthSettings(currentYear, currentMonth).budgetTotal || 0;
+  const g = getGoals(); // 仍可從 localStorage 讀取（如果之前有設定）
+  const goalSpend  = g.spend  || monthBudget || 0;
+  const goalRev    = g.rev    || 0;
+  const goalOrders = g.orders || 0;
+  const goalRoas   = g.roas   || 5;
+
+  const progBar = (cur, goal, inverse=false) => {
+    if(!goal || !cur) return '';
+    const pct = Math.min((cur/goal)*100, 100);
+    const clr = pct>=100 ? (inverse?'#DC2626':'#15803D') : pct>=75 ? '#D97706' : '#378ADD';
+    return `<div class="kpi-progress"><div class="kpi-progress-bar" style="width:${pct}%;background:${clr};"></div></div>
+            <div class="kpi-achieve" style="color:${clr};">${pct.toFixed(0)}% ${pct>=100?(inverse?'⚠ 超標':'✓ 達標'):'進行中'}</div>`;
+  };
+
   const kpiEl = document.getElementById('stats-kpi');
   kpiEl.innerHTML = `
-    <div class="kpi-card k-spend"><div class="kpi-lbl">月總花費</div><div class="kpi-val">$${Math.round(tot.spend).toLocaleString()}${momTag(tot.spend,prevTot?.spend,true)}</div><div class="kpi-sub">${rows.length} 天記錄${prevTot?` ｜ 上月 $${Math.round(prevTot.spend).toLocaleString()}`:''}</div></div>
-    <div class="kpi-card k-rev"><div class="kpi-lbl">廣告帶入業績</div><div class="kpi-val">$${Math.round(tot.rev).toLocaleString()}${momTag(tot.rev,prevTot?.rev)}</div><div class="kpi-sub">關鍵字 + 推薦廣告${prevTot?` ｜ 上月 $${Math.round(prevTot.rev).toLocaleString()}`:''}</div></div>
-    <div class="kpi-card k-roas"><div class="kpi-lbl">月均 ROAS</div><div class="kpi-val">${avgRoas>0?avgRoas.toFixed(2)+'x':'—'}${momTag(avgRoas,prevTot?.roas)}</div><div class="kpi-sub">目標 ≥ 5x${prevTot?` ｜ 上月 ${prevTot.roas.toFixed(2)}x`:''}</div></div>
-    <div class="kpi-card k-orders"><div class="kpi-lbl">月總訂單</div><div class="kpi-val">${tot.orders}筆${momTag(tot.orders,prevTot?.orders)}</div><div class="kpi-sub">日均 ${(tot.orders/rows.length).toFixed(1)} 筆${prevTot?` ｜ 上月 ${prevTot.orders}筆`:''}</div></div>
+    <div class="kpi-card k-spend"><div class="kpi-lbl">月總花費</div><div class="kpi-val">$${Math.round(tot.spend).toLocaleString()}${momTag(tot.spend,prevTot?.spend,true)}</div><div class="kpi-sub">${rows.length} 天記錄${prevTot?` ｜ 上月 $${Math.round(prevTot.spend).toLocaleString()}`:''}</div>${goalSpend?progBar(tot.spend,goalSpend,true):''}</div>
+    <div class="kpi-card k-rev"><div class="kpi-lbl">廣告帶入業績</div><div class="kpi-val">$${Math.round(tot.rev).toLocaleString()}${momTag(tot.rev,prevTot?.rev)}</div><div class="kpi-sub">關鍵字 + 推薦廣告${prevTot?` ｜ 上月 $${Math.round(prevTot.rev).toLocaleString()}`:''}</div>${goalRev?progBar(tot.rev,goalRev):''}</div>
+    <div class="kpi-card k-roas"><div class="kpi-lbl">月均 ROAS</div><div class="kpi-val">${avgRoas>0?avgRoas.toFixed(2)+'x':'—'}${momTag(avgRoas,prevTot?.roas)}</div><div class="kpi-sub">目標 ≥ ${goalRoas}x${prevTot?` ｜ 上月 ${prevTot.roas.toFixed(2)}x`:''}</div>${progBar(avgRoas,goalRoas)}</div>
+    <div class="kpi-card k-orders"><div class="kpi-lbl">月總訂單</div><div class="kpi-val">${tot.orders}筆${momTag(tot.orders,prevTot?.orders)}</div><div class="kpi-sub">日均 ${(tot.orders/rows.length).toFixed(1)} 筆${prevTot?` ｜ 上月 ${prevTot.orders}筆`:''}</div>${goalOrders?progBar(tot.orders,goalOrders):''}</div>
     <div class="kpi-card k-imp"><div class="kpi-lbl">月總曝光數</div><div class="kpi-val">${tot.totalImp>0?tot.totalImp.toLocaleString():'—'}${momTag(tot.totalImp,prevTot?.imp)}</div><div class="kpi-sub">關鍵字 + 推薦廣告${prevTot?` ｜ 上月 ${prevTot.imp.toLocaleString()}`:''}</div></div>
     <div class="kpi-card k-cpc"><div class="kpi-lbl">月均 CPC</div><div class="kpi-val">${avgCpc>0?'$'+Math.round(avgCpc):'—'}${momTag(avgCpc,prevTot?.cpc,true)}</div><div class="kpi-sub">關鍵字 + 推薦廣告${prevTot?` ｜ 上月 $${Math.round(prevTot.cpc)}`:''}</div></div>
     <div class="kpi-card k-cpm"><div class="kpi-lbl">月均 CPM</div><div class="kpi-val">${avgCpm>0?'$'+Math.round(avgCpm):'—'}${momTag(avgCpm,prevTot?.cpm,true)}</div><div class="kpi-sub">關鍵字 + 推薦廣告${prevTot?` ｜ 上月 $${Math.round(prevTot.cpm)}`:''}</div></div>
@@ -2434,15 +2612,252 @@ function renderMomSummary(filter, cur, curRoas, curCpc, curCpm, curCpa, curCtr, 
 
   el.innerHTML = `<div class="mom-card">
     <div class="mom-header">
-      <h3>✨ AI 重點摘要</h3>
+      <h3>✨ AI 月度分析</h3>
       <span class="mom-period">${prevY}年${prevM}月 vs ${y}年${m}月</span>
     </div>
-    <div id="ai-summary-content" style="font-size:13px;line-height:1.8;color:var(--text);min-height:60px;">
-      <span style="color:var(--text3);font-size:12px;">AI 正在分析廣告數據...</span>
+    <div id="ai-summary-content">
+      <div style="color:var(--text3);font-size:12px;padding:12px 0;">✨ AI 正在分析廣告數據...</div>
     </div>
   </div>`;
-  // 自動產生摘要
   generateAISummary('${filter}');
+}
+
+function saveGoals() {
+  const goals = {
+    roas:   parseFloat(document.getElementById('goal-roas')?.value)||0,
+    rev:    parseFloat(document.getElementById('goal-rev')?.value)||0,
+    orders: parseFloat(document.getElementById('goal-orders')?.value)||0,
+  };
+  localStorage.setItem('momo_goals_'+monthKey(currentYear,currentMonth), JSON.stringify(goals));
+}
+
+function loadGoals() {
+  try {
+    const g = JSON.parse(localStorage.getItem('momo_goals_'+monthKey(currentYear,currentMonth))||'{}');
+    const set = (id,val) => { const e=document.getElementById(id); if(e&&val) e.value=val; };
+    set('goal-roas', g.roas); set('goal-rev', g.rev); set('goal-orders', g.orders);
+  } catch{}
+}
+
+function getGoals() {
+  try {
+    const g = JSON.parse(localStorage.getItem('momo_goals_'+monthKey(currentYear,currentMonth))||'{}');
+    // 花費上限直接從月預算取
+    g.spend = parseFloat(document.getElementById('b-total')?.value)||0;
+    return g;
+  } catch { return {}; }
+}
+
+// ── Report page ──
+let _trendN = 6;
+let _reportTab = 'month';
+
+function setReportTab(tab, btn) {
+  _reportTab = tab;
+  document.querySelectorAll('.report-tab').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  document.querySelectorAll('.report-panel').forEach(p=>p.style.display='none');
+  document.getElementById('report-'+tab).style.display='block';
+  renderTrend();
+}
+
+function setTrendPeriod(n, btn) {
+  _trendN = n;
+  document.querySelectorAll('.trend-period-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderTrend();
+}
+
+function calcMonthData(all, m) {
+  const keys = Object.keys(all).filter(k=>k.startsWith(m));
+  if(!keys.length) return null;
+  const t = keys.reduce((a,k)=>{
+    const r=all[k];
+    return { spend:a.spend+getKwSpend(r)+(r.rec?.spend||0), rev:a.rev+getKwField(r,'rev')+(r.rec?.rev||0),
+             orders:a.orders+getKwField(r,'orders')+(r.rec?.orders||0),
+             click:a.click+getKwField(r,'click')+(r.rec?.click||0), imp:a.imp+getKwField(r,'imp')+(r.rec?.imp||0) };
+  }, {spend:0,rev:0,orders:0,click:0,imp:0});
+  return { m, ...t, roas:t.spend>0?t.rev/t.spend:0, cpa:t.orders>0?t.spend/t.orders:0,
+           cpc:t.click>0?t.spend/t.click:0, ctr:t.imp>0?t.click/t.imp:0 };
+}
+
+function chgCell(cur, prev, inverse=false) {
+  if(!prev||prev===0) return '<td>—</td>';
+  const pct = (cur-prev)/prev*100;
+  const good = inverse ? pct<0 : pct>0;
+  const clr = good ? 'var(--green)' : 'var(--red)';
+  const arrow = pct>0?'▲':'▼';
+  return `<td style="color:${clr};font-size:11px;white-space:nowrap;">${arrow}${Math.abs(pct).toFixed(1)}%</td>`;
+}
+
+function renderTrend() {
+  const all = getAllRecords();
+  const tc = '#888780', gc = 'rgba(0,0,0,.05)';
+  const baseOpts = { responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'top',labels:{color:tc,font:{size:11},boxWidth:10}}},
+    scales:{x:{ticks:{color:tc,font:{size:11}},grid:{color:gc}},
+            y:{ticks:{color:tc,font:{size:11}},grid:{color:gc}}} };
+  const noLeg = {...baseOpts, plugins:{legend:{display:false}}};
+
+  if(_reportTab === 'month') {
+    const allMonths = [...new Set(Object.keys(all).map(k=>k.slice(0,7)))].sort();
+    const months = allMonths.slice(-_trendN);
+    const data = months.map(m=>calcMonthData(all,m)).filter(Boolean);
+    if(!data.length) return;
+    const labels = data.map(d=>d.m.replace('-','年')+'月');
+
+    destroyChart('tr1');
+    _charts['tr1'] = new Chart(document.getElementById('trend-chart-rev'), {
+      data:{labels, datasets:[
+        {type:'bar',label:'花費',data:data.map(d=>Math.round(d.spend)),backgroundColor:'rgba(55,138,221,0.6)',borderRadius:4,yAxisID:'y'},
+        {type:'bar',label:'業績',data:data.map(d=>Math.round(d.rev)),backgroundColor:'rgba(29,158,117,0.6)',borderRadius:4,yAxisID:'y'},
+        {type:'line',label:'ROAS',data:data.map(d=>+d.roas.toFixed(2)),borderColor:'#EF9F27',pointRadius:4,borderWidth:2,yAxisID:'y2',fill:false,tension:0.3}
+      ]},
+      options:{...baseOpts,scales:{
+        x:{ticks:{color:tc,font:{size:11}},grid:{color:gc}},
+        y:{ticks:{color:tc,font:{size:11},callback:v=>'$'+Math.round(v/1000)+'K'},grid:{color:gc}},
+        y2:{position:'right',ticks:{color:'#EF9F27',font:{size:11},callback:v=>v+'x'},grid:{display:false}}
+      }}
+    });
+    destroyChart('tr2');
+    _charts['tr2'] = new Chart(document.getElementById('trend-chart-roas'), {
+      type:'line', data:{labels, datasets:[{label:'月均 ROAS',data:data.map(d=>+d.roas.toFixed(2)),borderColor:'#EF9F27',backgroundColor:'rgba(239,159,39,0.1)',pointRadius:5,borderWidth:2,fill:true,tension:0.3}]},
+      options:{...noLeg,scales:{x:{ticks:{color:tc,font:{size:11}},grid:{color:gc}},y:{ticks:{color:tc,font:{size:11}},grid:{color:gc}}}}
+    });
+    destroyChart('tr3');
+    _charts['tr3'] = new Chart(document.getElementById('trend-chart-cpa'), {
+      type:'bar', data:{labels, datasets:[{label:'月均 CPA',data:data.map(d=>Math.round(d.cpa)),backgroundColor:'rgba(139,92,246,0.6)',borderRadius:4}]},
+      options:noLeg
+    });
+    destroyChart('tr4');
+    _charts['tr4'] = new Chart(document.getElementById('trend-chart-orders'), {
+      type:'bar', data:{labels, datasets:[{label:'月總訂單',data:data.map(d=>d.orders),backgroundColor:'rgba(29,158,117,0.6)',borderRadius:4}]},
+      options:noLeg
+    });
+    destroyChart('tr5');
+    _charts['tr5'] = new Chart(document.getElementById('trend-chart-ctr'), {
+      type:'line', data:{labels, datasets:[{label:'點擊率',data:data.map(d=>+(d.ctr*100).toFixed(2)),borderColor:'#059669',backgroundColor:'rgba(5,150,105,0.1)',pointRadius:5,borderWidth:2,fill:true,tension:0.3}]},
+      options:{...noLeg,scales:{x:{ticks:{color:tc,font:{size:11}},grid:{color:gc}},y:{ticks:{color:tc,font:{size:11},callback:v=>v+'%'},grid:{color:gc}}}}
+    });
+
+    const tbody = document.getElementById('trend-month-body');
+    if(tbody) tbody.innerHTML = [...data].reverse().map((d,i,arr)=>{
+      const prev = arr[i+1];
+      return `<tr>
+        <td style="text-align:left;font-weight:600;">${d.m.replace('-','年')}月</td>
+        <td>$${Math.round(d.spend).toLocaleString()}</td>${chgCell(d.spend,prev?.spend,true)}
+        <td>$${Math.round(d.rev).toLocaleString()}</td>${chgCell(d.rev,prev?.rev)}
+        <td style="color:${d.roas>=5?'var(--green)':d.roas>=3?'var(--yellow)':'var(--red)'};font-weight:600;">${d.roas>0?d.roas.toFixed(2)+'x':'—'}</td>${chgCell(d.roas,prev?.roas)}
+        <td>${d.orders}筆</td><td>${d.cpa>0?'$'+Math.round(d.cpa):'—'}</td>
+      </tr>`;
+    }).join('');
+
+  } else if(_reportTab === 'quarter') {
+    const quarters = {};
+    Object.keys(all).sort().forEach(k=>{
+      const [y,m] = k.split('-').map(Number);
+      const q = Math.ceil(m/3);
+      const key = `${y}-Q${q}`;
+      if(!quarters[key]) quarters[key] = [];
+      quarters[key].push(k);
+    });
+    const qKeys = Object.keys(quarters).sort();
+    const qData = qKeys.map(qk=>{
+      const t = quarters[qk].reduce((a,k)=>{
+        const r=all[k];
+        return { spend:a.spend+getKwSpend(r)+(r.rec?.spend||0), rev:a.rev+getKwField(r,'rev')+(r.rec?.rev||0),
+                 orders:a.orders+getKwField(r,'orders')+(r.rec?.orders||0) };
+      }, {spend:0,rev:0,orders:0});
+      return { q:qk, ...t, roas:t.spend>0?t.rev/t.spend:0, cpa:t.orders>0?t.spend/t.orders:0 };
+    });
+    const qlabels = qData.map(d=>d.q);
+
+    destroyChart('tq1');
+    _charts['tq1'] = new Chart(document.getElementById('trend-chart-q-rev'), {
+      data:{labels:qlabels, datasets:[
+        {type:'bar',label:'花費',data:qData.map(d=>Math.round(d.spend)),backgroundColor:'rgba(55,138,221,0.6)',borderRadius:4,yAxisID:'y'},
+        {type:'bar',label:'業績',data:qData.map(d=>Math.round(d.rev)),backgroundColor:'rgba(29,158,117,0.6)',borderRadius:4,yAxisID:'y'},
+        {type:'line',label:'ROAS',data:qData.map(d=>+d.roas.toFixed(2)),borderColor:'#EF9F27',pointRadius:4,borderWidth:2,yAxisID:'y2',fill:false,tension:0.3}
+      ]},
+      options:{...baseOpts,scales:{x:{ticks:{color:tc,font:{size:11}},grid:{color:gc}},
+        y:{ticks:{color:tc,font:{size:11},callback:v=>'$'+Math.round(v/1000)+'K'},grid:{color:gc}},
+        y2:{position:'right',ticks:{color:'#EF9F27',font:{size:11},callback:v=>v+'x'},grid:{display:false}}}}
+    });
+    destroyChart('tq2');
+    _charts['tq2'] = new Chart(document.getElementById('trend-chart-q-roas'), {
+      type:'line', data:{labels:qlabels, datasets:[{label:'季均 ROAS',data:qData.map(d=>+d.roas.toFixed(2)),borderColor:'#EF9F27',backgroundColor:'rgba(239,159,39,0.1)',pointRadius:5,borderWidth:2,fill:true,tension:0.3}]},
+      options:{...noLeg,scales:{x:{ticks:{color:tc,font:{size:11}},grid:{color:gc}},y:{ticks:{color:tc,font:{size:11}},grid:{color:gc}}}}
+    });
+    destroyChart('tq3');
+    _charts['tq3'] = new Chart(document.getElementById('trend-chart-q-orders'), {
+      type:'bar', data:{labels:qlabels, datasets:[{label:'季總訂單',data:qData.map(d=>d.orders),backgroundColor:'rgba(29,158,117,0.6)',borderRadius:4}]},
+      options:noLeg
+    });
+
+    const tbody = document.getElementById('trend-quarter-body');
+    if(tbody) tbody.innerHTML = [...qData].reverse().map((d,i,arr)=>{
+      const prev = arr[i+1];
+      return `<tr>
+        <td style="text-align:left;font-weight:600;">${d.q}</td>
+        <td>$${Math.round(d.spend).toLocaleString()}</td>${chgCell(d.spend,prev?.spend,true)}
+        <td>$${Math.round(d.rev).toLocaleString()}</td>${chgCell(d.rev,prev?.rev)}
+        <td style="color:${d.roas>=5?'var(--green)':d.roas>=3?'var(--yellow)':'var(--red)'};font-weight:600;">${d.roas>0?d.roas.toFixed(2)+'x':'—'}</td>${chgCell(d.roas,prev?.roas)}
+        <td>${d.orders}筆</td><td>${d.cpa>0?'$'+Math.round(d.cpa):'—'}</td>
+      </tr>`;
+    }).join('');
+
+  } else if(_reportTab === 'year') {
+    const years = {};
+    Object.keys(all).forEach(k=>{
+      const y = k.slice(0,4);
+      if(!years[y]) years[y] = [];
+      years[y].push(k);
+    });
+    const yKeys = Object.keys(years).sort();
+    const yData = yKeys.map(y=>{
+      const t = years[y].reduce((a,k)=>{
+        const r=all[k];
+        return { spend:a.spend+getKwSpend(r)+(r.rec?.spend||0), rev:a.rev+getKwField(r,'rev')+(r.rec?.rev||0),
+                 orders:a.orders+getKwField(r,'orders')+(r.rec?.orders||0) };
+      }, {spend:0,rev:0,orders:0});
+      return { y, ...t, roas:t.spend>0?t.rev/t.spend:0, cpa:t.orders>0?t.spend/t.orders:0 };
+    });
+    const ylabels = yData.map(d=>d.y+'年');
+
+    destroyChart('ty1');
+    _charts['ty1'] = new Chart(document.getElementById('trend-chart-y-rev'), {
+      data:{labels:ylabels, datasets:[
+        {type:'bar',label:'花費',data:yData.map(d=>Math.round(d.spend)),backgroundColor:'rgba(55,138,221,0.6)',borderRadius:4,yAxisID:'y'},
+        {type:'bar',label:'業績',data:yData.map(d=>Math.round(d.rev)),backgroundColor:'rgba(29,158,117,0.6)',borderRadius:4,yAxisID:'y'},
+        {type:'line',label:'ROAS',data:yData.map(d=>+d.roas.toFixed(2)),borderColor:'#EF9F27',pointRadius:4,borderWidth:2,yAxisID:'y2',fill:false,tension:0.3}
+      ]},
+      options:{...baseOpts,scales:{x:{ticks:{color:tc,font:{size:11}},grid:{color:gc}},
+        y:{ticks:{color:tc,font:{size:11},callback:v=>'$'+Math.round(v/1000)+'K'},grid:{color:gc}},
+        y2:{position:'right',ticks:{color:'#EF9F27',font:{size:11},callback:v=>v+'x'},grid:{display:false}}}}
+    });
+    destroyChart('ty2');
+    _charts['ty2'] = new Chart(document.getElementById('trend-chart-y-roas'), {
+      type:'line', data:{labels:ylabels, datasets:[{label:'年均 ROAS',data:yData.map(d=>+d.roas.toFixed(2)),borderColor:'#EF9F27',backgroundColor:'rgba(239,159,39,0.1)',pointRadius:5,borderWidth:2,fill:true,tension:0.3}]},
+      options:{...noLeg,scales:{x:{ticks:{color:tc,font:{size:11}},grid:{color:gc}},y:{ticks:{color:tc,font:{size:11}},grid:{color:gc}}}}
+    });
+    destroyChart('ty3');
+    _charts['ty3'] = new Chart(document.getElementById('trend-chart-y-orders'), {
+      type:'bar', data:{labels:ylabels, datasets:[{label:'年總訂單',data:yData.map(d=>d.orders),backgroundColor:'rgba(29,158,117,0.6)',borderRadius:4}]},
+      options:noLeg
+    });
+
+    const tbody = document.getElementById('trend-year-body');
+    if(tbody) tbody.innerHTML = [...yData].reverse().map((d,i,arr)=>{
+      const prev = arr[i+1];
+      return `<tr>
+        <td style="text-align:left;font-weight:600;">${d.y}年</td>
+        <td>$${Math.round(d.spend).toLocaleString()}</td>${chgCell(d.spend,prev?.spend,true)}
+        <td>$${Math.round(d.rev).toLocaleString()}</td>${chgCell(d.rev,prev?.rev)}
+        <td style="color:${d.roas>=5?'var(--green)':d.roas>=3?'var(--yellow)':'var(--red)'};font-weight:600;">${d.roas>0?d.roas.toFixed(2)+'x':'—'}</td>${chgCell(d.roas,prev?.roas)}
+        <td>${d.orders}筆</td><td>${d.cpa>0?'$'+Math.round(d.cpa):'—'}</td>
+      </tr>`;
+    }).join('');
+  }
 }
 
 // ── AI 重點摘要 ──
@@ -2450,32 +2865,50 @@ async function generateAISummary(filter) {
   const content = document.getElementById('ai-summary-content');
   if(!content) return;
 
-  content.innerHTML = '<span style="color:var(--text3);font-size:12px;">✨ AI 正在分析廣告數據...</span>';
+  content.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px 0;">✨ AI 正在分析廣告數據...</div>';
 
   const all = getAllRecords();
   const keys = Object.keys(all).filter(k=>k.startsWith(filter)).sort();
   if(!keys.length) { content.innerHTML = '<span style="color:var(--text3);">尚無資料可分析</span>'; return; }
 
+  // 當月數據
   const rows = keys.map(k=>{
     const r=all[k];
-    const ks=getKwSpend(r), kr=getKwField(r,'rev'), ko=getKwField(r,'orders');
-    const rs=r.rec?.spend||0, rr=r.rec?.rev||0, ro=r.rec?.orders||0;
-    return { date:k.slice(5), spend:ks+rs, rev:kr+rr, orders:ko+ro };
+    return { date:k.slice(5), spend:getKwSpend(r)+(r.rec?.spend||0),
+             rev:getKwField(r,'rev')+(r.rec?.rev||0), orders:getKwField(r,'orders')+(r.rec?.orders||0),
+             click:getKwField(r,'click')+(r.rec?.click||0), imp:getKwField(r,'imp')+(r.rec?.imp||0) };
   });
-  const tot = rows.reduce((a,r)=>({spend:a.spend+r.spend,rev:a.rev+r.rev,orders:a.orders+r.orders}),{spend:0,rev:0,orders:0});
+  const tot = rows.reduce((a,r)=>({spend:a.spend+r.spend,rev:a.rev+r.rev,orders:a.orders+r.orders,click:a.click+r.click,imp:a.imp+r.imp}),{spend:0,rev:0,orders:0,click:0,imp:0});
   const roas = tot.spend>0 ? (tot.rev/tot.spend).toFixed(2) : 0;
   const cpa  = tot.orders>0 ? Math.round(tot.spend/tot.orders) : 0;
+  const cpc  = tot.click>0  ? Math.round(tot.spend/tot.click)  : 0;
+  const ctr  = tot.imp>0    ? (tot.click/tot.imp*100).toFixed(2) : 0;
 
+  // 上月數據
   const [cy,cm] = filter.split('-').map(Number);
   const pm=cm===1?12:cm-1, py=cm===1?cy-1:cy;
   const prevKeys = Object.keys(all).filter(k=>k.startsWith(monthKey(py,pm)));
   let prevStr = '無上月資料';
+  let prevData = null;
   if(prevKeys.length) {
-    const pt = prevKeys.reduce((a,k)=>{const r=all[k];return{spend:a.spend+getKwSpend(r)+(r.rec?.spend||0),rev:a.rev+getKwField(r,'rev')+(r.rec?.rev||0),orders:a.orders+getKwField(r,'orders')+(r.rec?.orders||0)};},{spend:0,rev:0,orders:0});
-    prevStr = `花費 $${Math.round(pt.spend).toLocaleString()}，業績 $${Math.round(pt.rev).toLocaleString()}，ROAS ${pt.spend>0?(pt.rev/pt.spend).toFixed(2):0}x，訂單 ${pt.orders} 筆`;
+    const pt = prevKeys.reduce((a,k)=>{
+      const r=all[k];
+      return {spend:a.spend+getKwSpend(r)+(r.rec?.spend||0),rev:a.rev+getKwField(r,'rev')+(r.rec?.rev||0),
+              orders:a.orders+getKwField(r,'orders')+(r.rec?.orders||0)};
+    },{spend:0,rev:0,orders:0});
+    prevData = pt;
+    const proas = pt.spend>0?(pt.rev/pt.spend).toFixed(2):0;
+    const pcpa  = pt.orders>0?Math.round(pt.spend/pt.orders):0;
+    prevStr = `花費 $${Math.round(pt.spend).toLocaleString()}，業績 $${Math.round(pt.rev).toLocaleString()}，ROAS ${proas}x，訂單 ${pt.orders} 筆，CPA $${pcpa}`;
   }
 
-  const prompt = `你是一位電商廣告分析師，請根據以下 MOMO 廣告數據，用繁體中文寫出 3~5 個重點摘要（每點一行，用 • 開頭），重點放在業績表現、廣告效益、費用效率，並給出一個簡短建議。
+  // 目標數據
+  const g = getGoals();
+  const goalStr = g.roas||g.rev||g.orders
+    ? `目標 ROAS：${g.roas||'未設定'}x，目標業績：${g.rev?'$'+Math.round(g.rev).toLocaleString():'未設定'}，目標訂單：${g.orders||'未設定'}筆`
+    : '未設定月目標';
+
+  const prompt = `你是一位電商廣告分析師，請根據以下 MOMO 廣告數據，用繁體中文產生月度分析報告。
 
 當月（${filter.replace('-','年')}月）數據：
 - 總花費：$${Math.round(tot.spend).toLocaleString()}
@@ -2483,11 +2916,22 @@ async function generateAISummary(filter) {
 - ROAS：${roas}x
 - 訂單數：${tot.orders} 筆
 - CPA：$${cpa}
+- CPC：$${cpc}
+- 點擊率：${ctr}%
 - 記錄天數：${rows.length} 天
-
 上月數據：${prevStr}
+月目標設定：${goalStr}
 
-請直接輸出摘要重點，不要有多餘說明。`;
+請用以下 JSON 格式回覆，不要有任何多餘文字：
+{
+  "risks": ["風險1", "風險2"],
+  "insights": ["洞察1", "洞察2", "洞察3"],
+  "summary": "一段50字以內的總結"
+}
+
+risks：1~3個風險警示（ROAS偏低、花費超標、CPA異常等）
+insights：2~4個數據洞察（趨勢、亮點、異常）
+summary：整體表現總結與下月建議`;
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -2500,12 +2944,31 @@ async function generateAISummary(filter) {
       })
     });
     const data = await res.json();
-    const text = data.content?.[0]?.text || '無法取得摘要';
-    content.innerHTML = text.split('\n').filter(l=>l.trim()).map(l =>
-      `<div style="padding:4px 0;">${l}</div>`
-    ).join('');
+    const raw = data.content?.[0]?.text || '{}';
+    let parsed;
+    try { parsed = JSON.parse(raw.replace(/```json|```/g,'')); }
+    catch { parsed = { risks:[], insights:[], summary: raw }; }
+
+    const { risks=[], insights=[], summary='' } = parsed;
+
+    content.innerHTML = `
+      ${risks.length ? `
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:700;color:#DC2626;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">⚠ 風險警示</div>
+        ${risks.map(r=>`<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 10px;background:#FEF2F2;border-left:3px solid #DC2626;border-radius:0 6px 6px 0;margin-bottom:6px;font-size:13px;color:#991B1B;">${r}</div>`).join('')}
+      </div>` : ''}
+      ${insights.length ? `
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:700;color:var(--accent);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">💡 數據洞察</div>
+        ${insights.map(i=>`<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 10px;background:var(--accent-bg);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;margin-bottom:6px;font-size:13px;color:var(--text);">${i}</div>`).join('')}
+      </div>` : ''}
+      ${summary ? `
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--green);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">📋 月度總結</div>
+        <div style="padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:13px;line-height:1.7;color:var(--text);">${summary}</div>
+      </div>` : ''}`;
   } catch(e) {
-    content.innerHTML = '<span style="color:var(--text3);">摘要產生失敗，請重新整理再試</span>';
+    content.innerHTML = '<span style="color:var(--text3);">分析失敗，請重新整理再試</span>';
   }
 }
 
@@ -2680,14 +3143,14 @@ function updateTopbarActions(page) {
   const monthBadge = document.getElementById('topbar-month');
 
   if(page === 'input') {
-    if(datePill) datePill.style.display = '';
+    if(datePill) datePill.style.display = 'flex';
     if(monthBadge) monthBadge.style.display = 'none';
     actions.innerHTML = `
       <button class="btn btn-ghost" onclick="clearAll()">清除</button>
       <button class="btn btn-primary" onclick="saveRecord()">💾 儲存</button>`;
   } else if(page === 'history') {
     if(datePill) datePill.style.display = 'none';
-    if(monthBadge) monthBadge.style.display = 'none';
+    if(monthBadge) { monthBadge.style.display = 'flex'; monthBadge.onclick = openMonthModal; }
     actions.innerHTML = `
       <select class="month-filter-select" id="history-filter" onchange="renderHistory()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);"></select>
       <button class="btn btn-ghost" onclick="exportCSV()" style="font-size:12px;">⬇ 匯出</button>
@@ -2695,16 +3158,21 @@ function updateTopbarActions(page) {
     setTimeout(()=>{ populateMonthFilter('history-filter'); renderHistory(); }, 50);
   } else if(page === 'stats') {
     if(datePill) datePill.style.display = 'none';
-    if(monthBadge) monthBadge.style.display = '';
+    if(monthBadge) { monthBadge.style.display = 'flex'; monthBadge.onclick = openMonthModal; }
     actions.innerHTML = `<button class="btn btn-ghost mobile-show" onclick="captureStats()" style="font-size:12px;display:none;">📷 截圖</button>`;
     const captureRow = document.getElementById('stats-capture-row');
     if(captureRow) captureRow.style.display = window.innerWidth > 768 ? 'flex' : 'none';
     const mobileCapture = document.querySelector('#topbar-actions .mobile-show');
     if(mobileCapture) mobileCapture.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
     setTimeout(()=>{ renderStats(monthKey(currentYear, currentMonth)); }, 50);
-  } else if(page === 'budget') {
+  } else if(page === 'trend') {
     if(datePill) datePill.style.display = 'none';
     if(monthBadge) monthBadge.style.display = 'none';
+    actions.innerHTML = '';
+    setTimeout(()=>{ renderTrend(); }, 50);
+  } else if(page === 'budget') {
+    if(datePill) datePill.style.display = 'none';
+    if(monthBadge) { monthBadge.style.display = 'flex'; monthBadge.onclick = openMonthModal; }
     actions.innerHTML = '';
   }
 }
