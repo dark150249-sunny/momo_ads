@@ -1199,7 +1199,7 @@ function recToSheetRow(date, rec) {
 function sheetRowToRec(row) {
   const pf = v => parseFloat(v)||0;
   // 新格式（6月起）：Apps Script 回傳 disp/gold/prod
-  if(row.format === 'new' || row.disp !== undefined) {
+  if(row.disp !== undefined) {
     return {
       date: row.date, event: row.event||'', budgetToday: 0, format: 'new',
       disp: { spend:pf(row.disp?.spend), imp:pf(row.disp?.imp), click:pf(row.disp?.click), orders:pf(row.disp?.orders), rev:pf(row.disp?.rev) },
@@ -1208,8 +1208,8 @@ function sheetRowToRec(row) {
       note: row.note||''
     };
   }
-  // 舊格式（5月以前）：Apps Script 回傳 kw/rec
-  if(row.kw !== undefined) {
+  // 舊格式（5月以前）：kw/rec
+  if(row.kw !== undefined || row.rec !== undefined) {
     return {
       date: row.date, event: row.event||'', budgetToday: 0, format: 'old',
       kw:  { spend:pf(row.kw?.spend), imp:pf(row.kw?.imp), click:pf(row.kw?.click), orders:pf(row.kw?.orders), rev:pf(row.kw?.rev) },
@@ -1583,12 +1583,14 @@ function saveRecord() {
 // ── 統一取花費/欄位（相容新舊格式）──
 function getTotalSpend(r) {
   if(!r) return 0;
-  if(r.format === 'new') return (r.disp?.spend||0)+(r.gold?.spend||0)+(r.prod?.spend||0);
+  if(r.format === 'new' || r.disp !== undefined)
+    return (r.disp?.spend||0)+(r.gold?.spend||0)+(r.prod?.spend||0);
   return getKwSpend(r) + (r.rec?.spend||0);
 }
 function getTotalField(r, field) {
   if(!r) return 0;
-  if(r.format === 'new') return (r.disp?.[field]||0)+(r.gold?.[field]||0)+(r.prod?.[field]||0);
+  if(r.format === 'new' || r.disp !== undefined)
+    return (r.disp?.[field]||0)+(r.gold?.[field]||0)+(r.prod?.[field]||0);
   return getKwField(r, field) + (r.rec?.[field]||0);
 }
 
