@@ -2077,8 +2077,14 @@ function renderStats(forceMonth) {
   </tr>`).join('') +
   `<tr style="font-weight:700;background:var(--surface2);">
     <td colspan="2">合計 / 平均</td>
-    <td>$${Math.round(kwTotal).toLocaleString()}</td>
-    <td>$${Math.round(recTotal).toLocaleString()}</td>
+    ${isNewFmt ? `
+    <td>$${Math.round(rows.reduce((s,r)=>s+(r.dispSpend||0),0)).toLocaleString()}</td>
+    <td>$${Math.round(rows.reduce((s,r)=>s+(r.goldSpend||0),0)).toLocaleString()}</td>
+    <td>$${Math.round(rows.reduce((s,r)=>s+(r.prodSpend||0),0)).toLocaleString()}</td>
+    ` : `
+    <td>$${Math.round(rows.reduce((s,r)=>s+r.kwSpend,0)).toLocaleString()}</td>
+    <td>$${Math.round(rows.reduce((s,r)=>s+r.recSpend,0)).toLocaleString()}</td>
+    `}
     <td>$${Math.round(tot.spend).toLocaleString()}</td>
     <td>$${Math.round(tot.rev).toLocaleString()}</td>
     <td class="${roasClass(avgRoas)}">${avgRoas>0?avgRoas.toFixed(2)+'x':'—'}</td>
