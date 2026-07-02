@@ -994,7 +994,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
         <div class="stats-card-title">每日明細</div>
         <div style="overflow-x:auto;">
           <table class="stats-table" id="stats-detail-table">
-            <thead><tr><th>日期</th><th>活動</th><th>關鍵字花費</th><th>推薦花費</th><th>總花費</th><th>訂購金額</th><th>ROAS</th><th>訂單數</th><th>曝光數</th><th>點擊率</th><th>CPC</th><th>CPM</th><th>CPA</th></tr></thead>
+            <thead id="stats-detail-head"><tr><th>日期</th><th>活動</th><th>關鍵字花費</th><th>推薦花費</th><th>總花費</th><th>訂購金額</th><th>ROAS</th><th>訂單數</th><th>曝光數</th><th>點擊率</th><th>CPC</th><th>CPM</th><th>CPA</th></tr></thead>
             <tbody id="stats-detail-body"></tbody>
           </table>
         </div>
@@ -1850,27 +1850,25 @@ function renderStats(forceMonth) {
 
   const rows = keys.map(k => {
     const r = all[k];
+    const isNew = r.format === 'new' || r.disp !== undefined;
+    const dispSpend = isNew ? (r.disp?.spend||0) : 0;
+    const goldSpend = isNew ? (r.gold?.spend||0) : 0;
+    const prodSpend = isNew ? (r.prod?.spend||0) : 0;
     const kwSpend  = getTotalSpend(r);
-    const recSpend = r.rec?.spend||0;
-    const totalSpend = kwSpend + recSpend;
-    const kwRev    = getTotalField(r,'rev');
-    const recRev   = r.rec?.rev||0;
-    const totalRev = kwRev + recRev;
-    const kwOrders = getTotalField(r,'orders');
-    const recOrders= r.rec?.orders||0;
-    const totalOrders = kwOrders + recOrders;
-    const kwClick  = getTotalField(r,'click');
-    const kwImp    = getTotalField(r,'imp');
-    const recClick = r.rec?.click||0;
-    const recImp   = r.rec?.imp||0;
-    const totalClick = kwClick + recClick;
-    const totalImp   = kwImp   + recImp;
+    const recSpend = isNew ? 0 : (r.rec?.spend||0);
+    const totalSpend = kwSpend;
+    const totalRev   = getTotalField(r,'rev');
+    const totalOrders= getTotalField(r,'orders');
+    const totalClick = getTotalField(r,'click');
+    const totalImp   = getTotalField(r,'imp');
+    const kwImp   = totalImp;
+    const kwClick = totalClick;
     const roas = totalSpend>0 ? totalRev/totalSpend : 0;
     const cpc  = totalClick>0 ? totalSpend/totalClick : 0;
     const cpm  = totalImp>0   ? (totalSpend/totalImp)*1000 : 0;
     const cpa  = totalOrders>0 ? totalSpend/totalOrders : 0;
     const ctr  = totalImp>0   ? totalClick/totalImp : 0;
-    return { date:k.slice(5), fullDate:k, event:r.event||'', kwSpend, recSpend, totalSpend, totalRev, totalOrders, kwClick, kwImp, totalClick, totalImp, roas, cpc, cpm, cpa, ctr };
+    return { date:k.slice(5), fullDate:k, event:r.event||'', kwSpend, recSpend, dispSpend, goldSpend, prodSpend, totalSpend, totalRev, totalOrders, kwClick, kwImp, totalClick, totalImp, roas, cpc, cpm, cpa, ctr };
   });
 
   const tot = rows.reduce((a,r)=>({
@@ -1975,17 +1973,38 @@ function renderStats(forceMonth) {
 
   // Chart 2: pie spend breakdown
   destroyChart('pie');
-  const kwTotal  = rows.reduce((s,r)=>s+r.kwSpend,0);
-  const recTotal = rows.reduce((s,r)=>s+r.recSpend,0);
-  _charts['pie'] = new Chart(document.getElementById('chart-spend-pie'),{
-    type:'doughnut',
-    data:{labels:['關鍵字廣告','推薦廣告'],
-      datasets:[{data:[Math.round(kwTotal),Math.round(recTotal)],
-        backgroundColor:['#378ADD','#F59E0B'],borderWidth:0,hoverOffset:4}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
-      plugins:{legend:{display:true,position:'bottom',labels:{color:tc,font:{size:11},boxWidth:10,padding:10}},
-        tooltip:{callbacks:{label:ctx=>' $'+ctx.parsed.toLocaleString()+' ('+((ctx.parsed/(kwTotal+recTotal))*100).toFixed(1)+'%)'}}}}
-  });
+  // 判斷是否為新格式月份
+  const [fy,fm] = filter.split('-').map(Number);
+  const isNewFmt = isNewFormat(fy, fm);
+
+  destroyChart('pie');
+  if(isNewFmt) {
+    const dispTotal = rows.reduce((s,r)=>s+(r.dispSpend||0),0);
+    const goldTotal = rows.reduce((s,r)=>s+(r.goldSpend||0),0);
+    const prodTotal = rows.reduce((s,r)=>s+(r.prodSpend||0),0);
+    const pieTotal  = dispTotal+goldTotal+prodTotal;
+    _charts['pie'] = new Chart(document.getElementById('chart-spend-pie'),{
+      type:'doughnut',
+      data:{labels:['展示型廣告','黃金置頂','商品廣告'],
+        datasets:[{data:[Math.round(dispTotal),Math.round(goldTotal),Math.round(prodTotal)],
+          backgroundColor:['#6366F1','#F59E0B','#378ADD'],borderWidth:0,hoverOffset:4}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+        plugins:{legend:{display:true,position:'bottom',labels:{color:tc,font:{size:11},boxWidth:10,padding:10}},
+          tooltip:{callbacks:{label:ctx=>' $'+ctx.parsed.toLocaleString()+' ('+((ctx.parsed/pieTotal)*100).toFixed(1)+'%)'}}}}
+    });
+  } else {
+    const kwTotal  = rows.reduce((s,r)=>s+r.kwSpend,0);
+    const recTotal = rows.reduce((s,r)=>s+r.recSpend,0);
+    _charts['pie'] = new Chart(document.getElementById('chart-spend-pie'),{
+      type:'doughnut',
+      data:{labels:['關鍵字廣告','推薦廣告'],
+        datasets:[{data:[Math.round(kwTotal),Math.round(recTotal)],
+          backgroundColor:['#378ADD','#F59E0B'],borderWidth:0,hoverOffset:4}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+        plugins:{legend:{display:true,position:'bottom',labels:{color:tc,font:{size:11},boxWidth:10,padding:10}},
+          tooltip:{callbacks:{label:ctx=>' $'+ctx.parsed.toLocaleString()+' ('+((ctx.parsed/(kwTotal+recTotal))*100).toFixed(1)+'%)'}}}}
+    });
+  }
 
   // Chart 3: ROAS
   destroyChart('roas');
@@ -2024,14 +2043,28 @@ function renderStats(forceMonth) {
     }}
   });
 
-  // Detail table
+  // Detail table - header 根據新舊格式切換
+  const thead = document.getElementById('stats-detail-head');
+  if(thead) {
+    if(isNewFmt) {
+      thead.innerHTML = '<tr><th>日期</th><th>活動</th><th>展示型</th><th>黃金置頂</th><th>商品廣告</th><th>總花費</th><th>訂購金額</th><th>ROAS</th><th>訂單數</th><th>曝光數</th><th>點擊率</th><th>CPC</th><th>CPM</th><th>CPA</th></tr>';
+    } else {
+      thead.innerHTML = '<tr><th>日期</th><th>活動</th><th>關鍵字花費</th><th>推薦花費</th><th>總花費</th><th>訂購金額</th><th>ROAS</th><th>訂單數</th><th>曝光數</th><th>點擊率</th><th>CPC</th><th>CPM</th><th>CPA</th></tr>';
+    }
+  }
   const tbody = document.getElementById('stats-detail-body');
   const roasClass = r => r>=8?'roas-good':r>=5?'roas-warn':r>0?'roas-bad':'';
   tbody.innerHTML = rows.map(r=>`<tr>
     <td>${r.fullDate}</td>
     <td>${r.event?`<span class="evt-tag">${r.event}</span>`:''}</td>
+    ${isNewFmt ? `
+    <td>$${Math.round(r.dispSpend).toLocaleString()}</td>
+    <td>$${Math.round(r.goldSpend).toLocaleString()}</td>
+    <td>$${Math.round(r.prodSpend).toLocaleString()}</td>
+    ` : `
     <td>$${Math.round(r.kwSpend).toLocaleString()}</td>
     <td>$${Math.round(r.recSpend).toLocaleString()}</td>
+    `}
     <td><strong>$${Math.round(r.totalSpend).toLocaleString()}</strong></td>
     <td>$${Math.round(r.totalRev).toLocaleString()}</td>
     <td class="${roasClass(r.roas)}">${r.roas>0?r.roas.toFixed(2)+'x':'—'}</td>
