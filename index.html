@@ -1254,6 +1254,14 @@ async function syncFromSheets() {
   localStorage.setItem('momo_ad_records', JSON.stringify(local));
   recalcCumulative();
   showToast('✓ 已從 Google Sheets 同步 '+Object.keys(rows).length+' 筆資料');
+  // 強制更新左側累計花費
+  const prefix = monthKey(currentYear, currentMonth);
+  const all2 = getAllRecords();
+  const monthTotal = Object.keys(all2).filter(k=>k.startsWith(prefix))
+    .reduce((sum,k)=>sum+getTotalSpend(all2[k]),0);
+  document.getElementById('b-cum').value = Math.round(monthTotal);
+  saveMonthSettings();
+  updateBudget();
 
   // 如果數據統計頁面開著，自動刷新
   if(document.getElementById('page-stats')?.classList.contains('active')) {
@@ -1933,14 +1941,14 @@ function renderStats(forceMonth) {
   const kpiEl = document.getElementById('stats-kpi');
   kpiEl.innerHTML = `
     <div class="kpi-card k-spend"><div class="kpi-lbl">月總花費</div><div class="kpi-val">$${Math.round(tot.spend).toLocaleString()}${momTag(tot.spend,prevTot?.spend,true)}</div><div class="kpi-sub">${rows.length} 天記錄${prevTot?` ｜ 上月 $${Math.round(prevTot.spend).toLocaleString()}`:''}</div>${goalSpend?progBar(tot.spend,goalSpend,true):''}</div>
-    <div class="kpi-card k-rev"><div class="kpi-lbl">廣告帶入業績</div><div class="kpi-val">$${Math.round(tot.rev).toLocaleString()}${momTag(tot.rev,prevTot?.rev)}</div><div class="kpi-sub">關鍵字 + 推薦廣告${prevTot?` ｜ 上月 $${Math.round(prevTot.rev).toLocaleString()}`:''}</div>${goalRev?progBar(tot.rev,goalRev):''}</div>
+    <div class="kpi-card k-rev"><div class="kpi-lbl">廣告帶入業績</div><div class="kpi-val">$${Math.round(tot.rev).toLocaleString()}${momTag(tot.rev,prevTot?.rev)}</div><div class="kpi-sub">${isNewFmt?"展示型 + 黃金置頂 + 商品廣告":"關鍵字 + 推薦廣告"}${prevTot?` ｜ 上月 $${Math.round(prevTot.rev).toLocaleString()}`:''}</div>${goalRev?progBar(tot.rev,goalRev):''}</div>
     <div class="kpi-card k-roas"><div class="kpi-lbl">月均 ROAS</div><div class="kpi-val">${avgRoas>0?avgRoas.toFixed(2)+'x':'—'}${momTag(avgRoas,prevTot?.roas)}</div><div class="kpi-sub">目標 ≥ ${goalRoas}x${prevTot?` ｜ 上月 ${prevTot.roas.toFixed(2)}x`:''}</div>${progBar(avgRoas,goalRoas)}</div>
     <div class="kpi-card k-orders"><div class="kpi-lbl">月總訂單</div><div class="kpi-val">${tot.orders}筆${momTag(tot.orders,prevTot?.orders)}</div><div class="kpi-sub">日均 ${(tot.orders/rows.length).toFixed(1)} 筆${prevTot?` ｜ 上月 ${prevTot.orders}筆`:''}</div>${goalOrders?progBar(tot.orders,goalOrders):''}</div>
-    <div class="kpi-card k-imp"><div class="kpi-lbl">月總曝光數</div><div class="kpi-val">${tot.totalImp>0?tot.totalImp.toLocaleString():'—'}${momTag(tot.totalImp,prevTot?.imp)}</div><div class="kpi-sub">關鍵字 + 推薦廣告${prevTot?` ｜ 上月 ${prevTot.imp.toLocaleString()}`:''}</div></div>
-    <div class="kpi-card k-cpc"><div class="kpi-lbl">月均 CPC</div><div class="kpi-val">${avgCpc>0?'$'+Math.round(avgCpc):'—'}${momTag(avgCpc,prevTot?.cpc,true)}</div><div class="kpi-sub">關鍵字 + 推薦廣告${prevTot?` ｜ 上月 $${Math.round(prevTot.cpc)}`:''}</div></div>
-    <div class="kpi-card k-cpm"><div class="kpi-lbl">月均 CPM</div><div class="kpi-val">${avgCpm>0?'$'+Math.round(avgCpm):'—'}${momTag(avgCpm,prevTot?.cpm,true)}</div><div class="kpi-sub">關鍵字 + 推薦廣告${prevTot?` ｜ 上月 $${Math.round(prevTot.cpm)}`:''}</div></div>
-    <div class="kpi-card k-cpa"><div class="kpi-lbl">月均 CPA</div><div class="kpi-val">${avgCpa>0?'$'+Math.round(avgCpa):'—'}${momTag(avgCpa,prevTot?.cpa,true)}</div><div class="kpi-sub">關鍵字 + 推薦廣告${prevTot?` ｜ 上月 $${Math.round(prevTot.cpa)}`:''}</div></div>
-    <div class="kpi-card k-ctr"><div class="kpi-lbl">月均點擊率</div><div class="kpi-val">${avgCtr>0?(avgCtr*100).toFixed(2)+'%':'—'}${momTag(avgCtr,prevTot?.ctr)}</div><div class="kpi-sub">關鍵字 + 推薦廣告${prevTot?` ｜ 上月 ${(prevTot.ctr*100).toFixed(2)}%`:''}</div></div>`;
+    <div class="kpi-card k-imp"><div class="kpi-lbl">月總曝光數</div><div class="kpi-val">${tot.totalImp>0?tot.totalImp.toLocaleString():'—'}${momTag(tot.totalImp,prevTot?.imp)}</div><div class="kpi-sub">${isNewFmt?"展示型 + 黃金置頂 + 商品廣告":"關鍵字 + 推薦廣告"}${prevTot?` ｜ 上月 ${prevTot.imp.toLocaleString()}`:''}</div></div>
+    <div class="kpi-card k-cpc"><div class="kpi-lbl">月均 CPC</div><div class="kpi-val">${avgCpc>0?'$'+Math.round(avgCpc):'—'}${momTag(avgCpc,prevTot?.cpc,true)}</div><div class="kpi-sub">${isNewFmt?"展示型 + 黃金置頂 + 商品廣告":"關鍵字 + 推薦廣告"}${prevTot?` ｜ 上月 $${Math.round(prevTot.cpc)}`:''}</div></div>
+    <div class="kpi-card k-cpm"><div class="kpi-lbl">月均 CPM</div><div class="kpi-val">${avgCpm>0?'$'+Math.round(avgCpm):'—'}${momTag(avgCpm,prevTot?.cpm,true)}</div><div class="kpi-sub">${isNewFmt?"展示型 + 黃金置頂 + 商品廣告":"關鍵字 + 推薦廣告"}${prevTot?` ｜ 上月 $${Math.round(prevTot.cpm)}`:''}</div></div>
+    <div class="kpi-card k-cpa"><div class="kpi-lbl">月均 CPA</div><div class="kpi-val">${avgCpa>0?'$'+Math.round(avgCpa):'—'}${momTag(avgCpa,prevTot?.cpa,true)}</div><div class="kpi-sub">${isNewFmt?"展示型 + 黃金置頂 + 商品廣告":"關鍵字 + 推薦廣告"}${prevTot?` ｜ 上月 $${Math.round(prevTot.cpa)}`:''}</div></div>
+    <div class="kpi-card k-ctr"><div class="kpi-lbl">月均點擊率</div><div class="kpi-val">${avgCtr>0?(avgCtr*100).toFixed(2)+'%':'—'}${momTag(avgCtr,prevTot?.ctr)}</div><div class="kpi-sub">${isNewFmt?"展示型 + 黃金置頂 + 商品廣告":"關鍵字 + 推薦廣告"}${prevTot?` ｜ 上月 ${(prevTot.ctr*100).toFixed(2)}%`:''}</div></div>`;
 
   // ── MoM comparison ──
   renderMomSummary(filter, tot, avgRoas, avgCpc, avgCpm, avgCpa, avgCtr, rows.length, prevTot, prevKeys2.length);
