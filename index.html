@@ -1584,7 +1584,7 @@ function saveRecord() {
 function getTotalSpend(r) {
   if(!r) return 0;
   if(r.format === 'new') return (r.disp?.spend||0)+(r.gold?.spend||0)+(r.prod?.spend||0);
-  return getTotalSpend(r);
+  return getKwSpend(r) + (r.rec?.spend||0);
 }
 function getTotalField(r, field) {
   if(!r) return 0;
@@ -1800,14 +1800,13 @@ function renderStats(forceMonth) {
   const filterEl = document.getElementById('stats-filter');
   const all = getAllRecords();
 
-  // 永遠以當前月份為預設
-  const cur = forceMonth || (filterEl?.value) || monthKey(currentYear, currentMonth);
+  // 優先用 forceMonth，其次用當前月份，最後才看 filterEl
+  const cur = forceMonth || monthKey(currentYear, currentMonth);
   const months = [...new Set(Object.keys(all).map(k=>k.slice(0,7)))].sort().reverse();
 
   if(filterEl) {
     filterEl.innerHTML = months.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m.replace('-','年')}月</option>`).join('');
-    // 若當前月份不在選單，仍然設定
-    if(!filterEl.value) filterEl.value = cur;
+    filterEl.value = cur;
   }
 
   const filter = cur;
