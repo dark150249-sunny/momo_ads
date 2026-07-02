@@ -664,55 +664,136 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
         <div class="s-card orders"><div class="s-lbl">總訂單數</div><div class="s-val" id="sum-orders">—</div></div>
       </div>
 
-      <div class="cards-grid">
-        <!-- 關鍵字廣告 -->
-        <div class="card kw-section" id="kw-section">
-          <div class="card-header" style="cursor:default;">
-            <div class="card-title">
-              <div class="card-icon icon-kw">🔍</div>
-              <div><div class="card-name">關鍵字廣告</div><div class="card-sub">總和數據</div></div>
+      <div class="cards-grid" id="ads-cards-grid">
+        <!-- 舊格式（5月以前）：關鍵字廣告 + 推薦廣告 -->
+        <div id="old-format-sections">
+          <!-- 關鍵字廣告 -->
+          <div class="card kw-section" id="kw-section" style="margin-bottom:16px;">
+            <div class="card-header" style="cursor:default;">
+              <div class="card-title">
+                <div class="card-icon icon-kw">🔍</div>
+                <div><div class="card-name">關鍵字廣告</div><div class="card-sub">總和數據</div></div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="fields">
+                <div class="field"><label>花費 <span class="unit-tag">NTD</span></label><div class="input-wrap"><span class="pfx">$</span><input type="number" id="kw-spend" placeholder="0" oninput="calcAll()"></div></div>
+                <div class="field"><label>曝光數</label><div class="input-wrap"><input type="number" id="kw-imp" placeholder="0" oninput="calcAll()"></div></div>
+                <div class="field"><label>點擊數</label><div class="input-wrap"><input type="number" id="kw-click" placeholder="0" oninput="calcAll()"></div></div>
+                <div class="field"><label>訂單數</label><div class="input-wrap"><input type="number" id="kw-orders" placeholder="0" oninput="calcAll()"></div></div>
+                <div class="field"><label>訂單金額 <span class="unit-tag">NTD</span></label><div class="input-wrap"><span class="pfx">$</span><input type="number" id="kw-rev" placeholder="0" oninput="calcAll()"></div></div>
+              </div>
+              <div class="metrics-row" style="grid-template-columns:repeat(5,1fr);">
+                <div class="metric-chip"><div class="mc-lbl">點擊率</div><div class="mc-val" id="kw-ctr">—</div></div>
+                <div class="metric-chip"><div class="mc-lbl">ROAS</div><div class="mc-val" id="kw-roas">—</div></div>
+                <div class="metric-chip"><div class="mc-lbl">CPA</div><div class="mc-val" id="kw-cpa">—</div></div>
+                <div class="metric-chip"><div class="mc-lbl">CPC</div><div class="mc-val" id="kw-cpc">—</div></div>
+                <div class="metric-chip"><div class="mc-lbl">CPM</div><div class="mc-val" id="kw-cpm">—</div></div>
+              </div>
             </div>
           </div>
-          <div class="card-body">
-            <div class="fields">
-              <div class="field"><label>花費 <span class="unit-tag">NTD</span></label><div class="input-wrap"><span class="pfx">$</span><input type="number" id="kw-spend" placeholder="0" oninput="calcAll()"></div></div>
-              <div class="field"><label>曝光數</label><div class="input-wrap"><input type="number" id="kw-imp" placeholder="0" oninput="calcAll()"></div></div>
-              <div class="field"><label>點擊數</label><div class="input-wrap"><input type="number" id="kw-click" placeholder="0" oninput="calcAll()"></div></div>
-              <div class="field"><label>訂單數</label><div class="input-wrap"><input type="number" id="kw-orders" placeholder="0" oninput="calcAll()"></div></div>
-              <div class="field"><label>訂單金額 <span class="unit-tag">NTD</span></label><div class="input-wrap"><span class="pfx">$</span><input type="number" id="kw-rev" placeholder="0" oninput="calcAll()"></div></div>
+          <!-- 推薦廣告 -->
+          <div class="card" id="rec-section">
+            <div class="card-header" style="cursor:default;">
+              <div class="card-title">
+                <div class="card-icon icon-rec">📣</div>
+                <div><div class="card-name">推薦廣告（曝光型）</div><div class="card-sub">CPC 固定 $25</div></div>
+              </div>
             </div>
-            <div class="metrics-row" style="grid-template-columns:repeat(5,1fr);">
-              <div class="metric-chip"><div class="mc-lbl">點擊率</div><div class="mc-val" id="kw-ctr">—</div></div>
-              <div class="metric-chip"><div class="mc-lbl">ROAS</div><div class="mc-val" id="kw-roas">—</div></div>
-              <div class="metric-chip"><div class="mc-lbl">CPA</div><div class="mc-val" id="kw-cpa">—</div></div>
-              <div class="metric-chip"><div class="mc-lbl">CPC</div><div class="mc-val" id="kw-cpc">—</div></div>
-              <div class="metric-chip"><div class="mc-lbl">CPM</div><div class="mc-val" id="kw-cpm">—</div></div>
+            <div class="card-body">
+              <div class="fields">
+                <div class="field"><label>花費 <span class="unit-tag">NTD</span></label><div class="input-wrap"><span class="pfx">$</span><input type="number" id="rec-spend" placeholder="0" oninput="calcAll()"></div></div>
+                <div class="field"><label>曝光數</label><div class="input-wrap"><input type="number" id="rec-imp" placeholder="0" oninput="calcAll()"></div></div>
+                <div class="field"><label>點擊數</label><div class="input-wrap"><input type="number" id="rec-click" placeholder="0" oninput="calcAll()"></div></div>
+                <div class="field"><label>訂單數</label><div class="input-wrap"><input type="number" id="rec-orders" placeholder="0" oninput="calcAll()"></div></div>
+                <div class="field"><label>訂單金額 <span class="unit-tag">NTD</span></label><div class="input-wrap"><span class="pfx">$</span><input type="number" id="rec-rev" placeholder="0" oninput="calcAll()"></div></div>
+              </div>
+              <div class="metrics-row" style="grid-template-columns:repeat(5,1fr);">
+                <div class="metric-chip"><div class="mc-lbl">點擊率</div><div class="mc-val" id="rec-ctr">—</div></div>
+                <div class="metric-chip"><div class="mc-lbl">ROAS</div><div class="mc-val" id="rec-roas">—</div></div>
+                <div class="metric-chip"><div class="mc-lbl">CPA</div><div class="mc-val" id="rec-cpa">—</div></div>
+                <div class="metric-chip"><div class="mc-lbl">CPC</div><div class="mc-val" id="rec-cpc">—</div></div>
+                <div class="metric-chip"><div class="mc-lbl">CPM</div><div class="mc-val" id="rec-cpm-calc">—</div></div>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Rec -->
-        <div class="card" id="rec-section" style="grid-column:1/-1;">
-          <div class="card-header" style="cursor:default;">
-            <div class="card-title">
-              <div class="card-icon icon-rec">📣</div>
-              <div><div class="card-name">推薦廣告（曝光型）</div><div class="card-sub">CPC 固定 $25</div></div>
+        <!-- 新格式（6月起）：展示型廣告 + 黃金置頂 + 商品廣告 -->
+        <div id="new-format-sections" style="display:none;">
+          <!-- 展示型廣告 -->
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-header" style="cursor:default;">
+              <div class="card-title">
+                <div class="card-icon" style="background:#EEF2FF;">🖼️</div>
+                <div><div class="card-name">展示型廣告</div><div class="card-sub">曝光型版位</div></div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="fields">
+                <div class="field"><label>花費 <span class="unit-tag">NTD</span></label><div class="input-wrap"><span class="pfx">$</span><input type="number" id="disp-spend" placeholder="0" oninput="calcAll()"></div></div>
+                <div class="field"><label>曝光數</label><div class="input-wrap"><input type="number" id="disp-imp" placeholder="0" oninput="calcAll()"></div></div>
+                <div class="field"><label>點擊數</label><div class="input-wrap"><input type="number" id="disp-click" placeholder="0" oninput="calcAll()"></div></div>
+                <div class="field"><label>訂單數</label><div class="input-wrap"><input type="number" id="disp-orders" placeholder="0" oninput="calcAll()"></div></div>
+                <div class="field"><label>訂單金額 <span class="unit-tag">NTD</span></label><div class="input-wrap"><span class="pfx">$</span><input type="number" id="disp-rev" placeholder="0" oninput="calcAll()"></div></div>
+              </div>
+              <div class="metrics-row" style="grid-template-columns:repeat(5,1fr);">
+                <div class="metric-chip"><div class="mc-lbl">點擊率</div><div class="mc-val" id="disp-ctr">—</div></div>
+                <div class="metric-chip"><div class="mc-lbl">ROAS</div><div class="mc-val" id="disp-roas">—</div></div>
+                <div class="metric-chip"><div class="mc-lbl">CPA</div><div class="mc-val" id="disp-cpa">—</div></div>
+                <div class="metric-chip"><div class="mc-lbl">CPC</div><div class="mc-val" id="disp-cpc">—</div></div>
+                <div class="metric-chip"><div class="mc-lbl">CPM</div><div class="mc-val" id="disp-cpm">—</div></div>
+              </div>
             </div>
           </div>
-          <div class="card-body">
-            <div class="fields">
-              <div class="field"><label>花費 <span class="unit-tag">NTD</span></label><div class="input-wrap"><span class="pfx">$</span><input type="number" id="rec-spend" placeholder="0" oninput="calcAll()"></div></div>
-              <div class="field"><label>曝光數</label><div class="input-wrap"><input type="number" id="rec-imp" placeholder="0" oninput="calcAll()"></div></div>
-              <div class="field"><label>點擊數</label><div class="input-wrap"><input type="number" id="rec-click" placeholder="0" oninput="calcAll()"></div></div>
-              <div class="field"><label>訂單數</label><div class="input-wrap"><input type="number" id="rec-orders" placeholder="0" oninput="calcAll()"></div></div>
-              <div class="field"><label>訂單金額 <span class="unit-tag">NTD</span></label><div class="input-wrap"><span class="pfx">$</span><input type="number" id="rec-rev" placeholder="0" oninput="calcAll()"></div></div>
+          <!-- 黃金置頂 -->
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-header" style="cursor:default;">
+              <div class="card-title">
+                <div class="card-icon" style="background:#FFF9E6;">🥇</div>
+                <div><div class="card-name">黃金置頂</div><div class="card-sub">搜尋頁最頂部版位</div></div>
+              </div>
             </div>
-            <div class="metrics-row" style="grid-template-columns:repeat(5,1fr);">
-              <div class="metric-chip"><div class="mc-lbl">點擊率</div><div class="mc-val" id="rec-ctr">—</div></div>
-              <div class="metric-chip"><div class="mc-lbl">ROAS</div><div class="mc-val" id="rec-roas">—</div></div>
-              <div class="metric-chip"><div class="mc-lbl">CPA</div><div class="mc-val" id="rec-cpa">—</div></div>
-              <div class="metric-chip"><div class="mc-lbl">CPC</div><div class="mc-val" id="rec-cpc">—</div></div>
-              <div class="metric-chip"><div class="mc-lbl">CPM</div><div class="mc-val" id="rec-cpm-calc">—</div></div>
+            <div class="card-body">
+              <div class="fields">
+                <div class="field"><label>花費 <span class="unit-tag">NTD</span></label><div class="input-wrap"><span class="pfx">$</span><input type="number" id="gold-spend" placeholder="0" oninput="calcAll()"></div></div>
+                <div class="field"><label>曝光數</label><div class="input-wrap"><input type="number" id="gold-imp" placeholder="0" oninput="calcAll()"></div></div>
+                <div class="field"><label>點擊數</label><div class="input-wrap"><input type="number" id="gold-click" placeholder="0" oninput="calcAll()"></div></div>
+                <div class="field"><label>訂單數</label><div class="input-wrap"><input type="number" id="gold-orders" placeholder="0" oninput="calcAll()"></div></div>
+                <div class="field"><label>訂單金額 <span class="unit-tag">NTD</span></label><div class="input-wrap"><span class="pfx">$</span><input type="number" id="gold-rev" placeholder="0" oninput="calcAll()"></div></div>
+              </div>
+              <div class="metrics-row" style="grid-template-columns:repeat(5,1fr);">
+                <div class="metric-chip"><div class="mc-lbl">點擊率</div><div class="mc-val" id="gold-ctr">—</div></div>
+                <div class="metric-chip"><div class="mc-lbl">ROAS</div><div class="mc-val" id="gold-roas">—</div></div>
+                <div class="metric-chip"><div class="mc-lbl">CPA</div><div class="mc-val" id="gold-cpa">—</div></div>
+                <div class="metric-chip"><div class="mc-lbl">CPC</div><div class="mc-val" id="gold-cpc">—</div></div>
+                <div class="metric-chip"><div class="mc-lbl">CPM</div><div class="mc-val" id="gold-cpm">—</div></div>
+              </div>
+            </div>
+          </div>
+          <!-- 商品廣告 -->
+          <div class="card">
+            <div class="card-header" style="cursor:default;">
+              <div class="card-title">
+                <div class="card-icon" style="background:#F0FDF4;">🛍️</div>
+                <div><div class="card-name">商品廣告</div><div class="card-sub">關鍵字 + 推薦 + 聯播網</div></div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="fields">
+                <div class="field"><label>花費 <span class="unit-tag">NTD</span></label><div class="input-wrap"><span class="pfx">$</span><input type="number" id="prod-spend" placeholder="0" oninput="calcAll()"></div></div>
+                <div class="field"><label>曝光數</label><div class="input-wrap"><input type="number" id="prod-imp" placeholder="0" oninput="calcAll()"></div></div>
+                <div class="field"><label>點擊數</label><div class="input-wrap"><input type="number" id="prod-click" placeholder="0" oninput="calcAll()"></div></div>
+                <div class="field"><label>訂單數</label><div class="input-wrap"><input type="number" id="prod-orders" placeholder="0" oninput="calcAll()"></div></div>
+                <div class="field"><label>訂單金額 <span class="unit-tag">NTD</span></label><div class="input-wrap"><span class="pfx">$</span><input type="number" id="prod-rev" placeholder="0" oninput="calcAll()"></div></div>
+              </div>
+              <div class="metrics-row" style="grid-template-columns:repeat(5,1fr);">
+                <div class="metric-chip"><div class="mc-lbl">點擊率</div><div class="mc-val" id="prod-ctr">—</div></div>
+                <div class="metric-chip"><div class="mc-lbl">ROAS</div><div class="mc-val" id="prod-roas">—</div></div>
+                <div class="metric-chip"><div class="mc-lbl">CPA</div><div class="mc-val" id="prod-cpa">—</div></div>
+                <div class="metric-chip"><div class="mc-lbl">CPC</div><div class="mc-val" id="prod-cpc">—</div></div>
+                <div class="metric-chip"><div class="mc-lbl">CPM</div><div class="mc-val" id="prod-cpm">—</div></div>
+              </div>
             </div>
           </div>
         </div>
@@ -1116,48 +1197,31 @@ function recToSheetRow(date, rec) {
 }
 
 function sheetRowToRec(row) {
-  // Apps Script 直接回傳 kw/rec 物件格式
-  if(row.kw !== undefined) {
+  const pf = v => parseFloat(v)||0;
+  // 新格式（6月起）：Apps Script 回傳 disp/gold/prod
+  if(row.format === 'new' || row.disp !== undefined) {
     return {
-      date:        row.date,
-      event:       row.event||'',
-      budgetToday: 0,
-      kw: {
-        spend:  parseFloat(row.kw?.spend)||0,
-        imp:    parseFloat(row.kw?.imp)||0,
-        click:  parseFloat(row.kw?.click)||0,
-        orders: parseFloat(row.kw?.orders)||0,
-        rev:    parseFloat(row.kw?.rev)||0
-      },
-      rec: {
-        spend:  parseFloat(row.rec?.spend)||0,
-        imp:    parseFloat(row.rec?.imp)||0,
-        click:  parseFloat(row.rec?.click)||0,
-        orders: parseFloat(row.rec?.orders)||0,
-        rev:    parseFloat(row.rec?.rev)||0
-      },
+      date: row.date, event: row.event||'', budgetToday: 0, format: 'new',
+      disp: { spend:pf(row.disp?.spend), imp:pf(row.disp?.imp), click:pf(row.disp?.click), orders:pf(row.disp?.orders), rev:pf(row.disp?.rev) },
+      gold: { spend:pf(row.gold?.spend), imp:pf(row.gold?.imp), click:pf(row.gold?.click), orders:pf(row.gold?.orders), rev:pf(row.gold?.rev) },
+      prod: { spend:pf(row.prod?.spend), imp:pf(row.prod?.imp), click:pf(row.prod?.click), orders:pf(row.prod?.orders), rev:pf(row.prod?.rev) },
       note: row.note||''
     };
   }
-  // 舊格式（中文欄位名稱）
+  // 舊格式（5月以前）：Apps Script 回傳 kw/rec
+  if(row.kw !== undefined) {
+    return {
+      date: row.date, event: row.event||'', budgetToday: 0, format: 'old',
+      kw:  { spend:pf(row.kw?.spend), imp:pf(row.kw?.imp), click:pf(row.kw?.click), orders:pf(row.kw?.orders), rev:pf(row.kw?.rev) },
+      rec: { spend:pf(row.rec?.spend), imp:pf(row.rec?.imp), click:pf(row.rec?.click), orders:pf(row.rec?.orders), rev:pf(row.rec?.rev) },
+      note: row.note||''
+    };
+  }
+  // 中文欄位名稱格式（舊版相容）
   return {
-    date:        row['日期'],
-    event:       row['活動']||'',
-    budgetToday: parseFloat(row['今日預算'])||0,
-    kw: {
-      spend:  parseFloat(row['關鍵字花費'])||0,
-      imp:    parseFloat(row['關鍵字曝光'])||0,
-      click:  parseFloat(row['關鍵字點擊'])||0,
-      orders: parseFloat(row['關鍵字訂單'])||0,
-      rev:    parseFloat(row['關鍵字金額'])||0
-    },
-    rec: {
-      spend:  parseFloat(row['推薦花費'])||0,
-      imp:    parseFloat(row['推薦曝光'])||0,
-      click:  parseFloat(row['推薦點擊'])||0,
-      orders: parseFloat(row['推薦訂單'])||0,
-      rev:    parseFloat(row['推薦金額'])||0
-    },
+    date: row['日期'], event: row['活動']||'', budgetToday: pf(row['今日預算']), format: 'old',
+    kw:  { spend:pf(row['關鍵字花費']), imp:pf(row['關鍵字曝光']), click:pf(row['關鍵字點擊']), orders:pf(row['關鍵字訂單']), rev:pf(row['關鍵字金額']) },
+    rec: { spend:pf(row['推薦花費']), imp:pf(row['推薦曝光']), click:pf(row['推薦點擊']), orders:pf(row['推薦訂單']), rev:pf(row['推薦金額']) },
     note: row['備註']||''
   };
 }
@@ -1203,6 +1267,7 @@ document.getElementById('record-date').value = today.toISOString().split('T')[0]
 loadMonthSettings();
 updateMonthDisplay();
 updateBudget();
+updateInputFormat();
 
 // 啟動時自動從 Sheets 同步
 syncFromSheets();
@@ -1261,7 +1326,6 @@ function updateMonthDisplay() {
   const label = `${currentYear}年${currentMonth}月`;
   setEl('sb-month-display', `${currentMonth}月`);
   setEl('topbar-month', `📅 ${label}`);
-  // 更新手機版月份顯示
   const mmb = document.getElementById('mmb-month-display');
   if(mmb) mmb.textContent = label;
 
@@ -1272,7 +1336,9 @@ function updateMonthDisplay() {
   const titles = {input:`手動輸入｜${label}`, history:`歷史記錄｜${label}`, stats:`數據統計｜${label}`, budget:`預算分配｜${label}`, trend:'跨月趨勢'};
   document.getElementById('page-title').textContent = titles[curPage]||`手動輸入｜${label}`;
 
-  // 更新歷史/統計月份篩選
+  // 切換新舊輸入格式
+  updateInputFormat();
+
   if(historyActive) { populateMonthFilter('history-filter'); renderHistory(); }
   if(statsActive)   { renderStats(monthKey(currentYear, currentMonth)); }
 }
@@ -1370,14 +1436,42 @@ function setMetrics(pre, spend, click, imp, orders, rev) {
   setEl(cpmId, fmtMoney(cpm));
 }
 
-function calcAll() {
-  const kw = { spend:v('kw-spend'), imp:v('kw-imp'), click:v('kw-click'), orders:v('kw-orders'), rev:v('kw-rev') };
-  setMetrics('kw', kw.spend, kw.click, kw.imp, kw.orders, kw.rev);
-  setMetrics('rec', v('rec-spend'), v('rec-click'), v('rec-imp'), v('rec-orders'), v('rec-rev'));
+// ── 新舊格式判斷（6月起為新格式）──
+function isNewFormat(year, month) {
+  return (year > 2026) || (year === 2026 && month >= 6);
+}
 
-  const ts = kw.spend + v('rec-spend');
-  const tr = kw.rev   + v('rec-rev');
-  const to = kw.orders+ v('rec-orders');
+// 切換輸入頁格式
+function updateInputFormat() {
+  const newFmt = isNewFormat(currentYear, currentMonth);
+  const oldSec = document.getElementById('old-format-sections');
+  const newSec = document.getElementById('new-format-sections');
+  if(oldSec) oldSec.style.display = newFmt ? 'none' : 'block';
+  if(newSec) newSec.style.display = newFmt ? 'block' : 'none';
+}
+
+function calcAll() {
+  const newFmt = isNewFormat(currentYear, currentMonth);
+  let ts=0, tr=0, to=0;
+
+  if(newFmt) {
+    // 新格式：展示型 + 黃金置頂 + 商品廣告
+    setMetrics('disp', v('disp-spend'), v('disp-click'), v('disp-imp'), v('disp-orders'), v('disp-rev'));
+    setMetrics('gold', v('gold-spend'), v('gold-click'), v('gold-imp'), v('gold-orders'), v('gold-rev'));
+    setMetrics('prod', v('prod-spend'), v('prod-click'), v('prod-imp'), v('prod-orders'), v('prod-rev'));
+    ts = v('disp-spend') + v('gold-spend') + v('prod-spend');
+    tr = v('disp-rev')   + v('gold-rev')   + v('prod-rev');
+    to = v('disp-orders')+ v('gold-orders')+ v('prod-orders');
+  } else {
+    // 舊格式：關鍵字廣告 + 推薦廣告
+    const kw = { spend:v('kw-spend'), imp:v('kw-imp'), click:v('kw-click'), orders:v('kw-orders'), rev:v('kw-rev') };
+    setMetrics('kw', kw.spend, kw.click, kw.imp, kw.orders, kw.rev);
+    setMetrics('rec', v('rec-spend'), v('rec-click'), v('rec-imp'), v('rec-orders'), v('rec-rev'));
+    ts = kw.spend + v('rec-spend');
+    tr = kw.rev   + v('rec-rev');
+    to = kw.orders+ v('rec-orders');
+  }
+
   setEl('sum-spend',  ts>0?'$'+ts.toLocaleString():'—');
   setEl('sum-rev',    tr>0?'$'+tr.toLocaleString():'—');
   setEl('sum-roas',   fmtRoas(ts>0?tr/ts:NaN));
@@ -1442,13 +1536,28 @@ function saveRecord() {
   if(!date){ showToast('請先選擇日期'); return; }
   const [y,m] = date.split('-').map(Number);
   if(y!==currentYear || m!==currentMonth){ showToast('日期不在目前月份，請確認'); return; }
-  const rec = {
-    date, event: document.getElementById('today-event').value,
-    budgetToday: v('b-today'),
-    kw:  {spend:v('kw-spend'),imp:v('kw-imp'),click:v('kw-click'),orders:v('kw-orders'),rev:v('kw-rev')},
-    rec: {spend:v('rec-spend'),imp:v('rec-imp'),click:v('rec-click'),orders:v('rec-orders'),rev:v('rec-rev')},
-    note: document.getElementById('note-text').value
-  };
+
+  const newFmt = isNewFormat(y, m);
+  let rec;
+  if(newFmt) {
+    rec = {
+      date, event: document.getElementById('today-event').value,
+      budgetToday: v('b-today'), format: 'new',
+      disp: {spend:v('disp-spend'),imp:v('disp-imp'),click:v('disp-click'),orders:v('disp-orders'),rev:v('disp-rev')},
+      gold: {spend:v('gold-spend'),imp:v('gold-imp'),click:v('gold-click'),orders:v('gold-orders'),rev:v('gold-rev')},
+      prod: {spend:v('prod-spend'),imp:v('prod-imp'),click:v('prod-click'),orders:v('prod-orders'),rev:v('prod-rev')},
+      note: document.getElementById('note-text').value
+    };
+  } else {
+    rec = {
+      date, event: document.getElementById('today-event').value,
+      budgetToday: v('b-today'), format: 'old',
+      kw:  {spend:v('kw-spend'),imp:v('kw-imp'),click:v('kw-click'),orders:v('kw-orders'),rev:v('kw-rev')},
+      rec: {spend:v('rec-spend'),imp:v('rec-imp'),click:v('rec-click'),orders:v('rec-orders'),rev:v('rec-rev')},
+      note: document.getElementById('note-text').value
+    };
+  }
+
   const all = getAllRecords();
   all[date] = rec;
   localStorage.setItem('momo_ad_records', JSON.stringify(all));
@@ -1456,39 +1565,45 @@ function saveRecord() {
   const prefix = monthKey(currentYear, currentMonth);
   const monthTotal = Object.keys(all)
     .filter(k => k.startsWith(prefix))
-    .reduce((sum, k) => {
-      const r = all[k];
-      return sum + getKwSpend(r) + (r.rec?.spend||0);
-    }, 0);
+    .reduce((sum, k) => sum + getTotalSpend(all[k]), 0);
   document.getElementById('b-cum').value = Math.round(monthTotal);
   saveMonthSettings();
   updateBudget();
   showToast('✓ 已儲存 '+date+'｜累計 $'+Math.round(monthTotal).toLocaleString());
 
-  // 如果數據統計頁面開著，自動刷新 AI 摘要
   if(document.getElementById('page-stats')?.classList.contains('active')) {
     renderStats(monthKey(currentYear, currentMonth));
   }
 
-  // 同步到 Google Sheets（背景執行，不阻塞 UI）
   gasPost({ action: 'save', record: recToSheetRow(date, rec) })
     .then(r => { if(r?.status) showToast('☁ 已同步到 Google Sheets'); })
     .catch(() => showToast('⚠ 本機已儲存，Sheets 同步失敗'));
 }
 
-// 統一取關鍵字花費（相容舊資料 r5+zp 格式）
+// ── 統一取花費/欄位（相容新舊格式）──
+function getTotalSpend(r) {
+  if(!r) return 0;
+  if(r.format === 'new') return (r.disp?.spend||0)+(r.gold?.spend||0)+(r.prod?.spend||0);
+  return getTotalSpend(r);
+}
+function getTotalField(r, field) {
+  if(!r) return 0;
+  if(r.format === 'new') return (r.disp?.[field]||0)+(r.gold?.[field]||0)+(r.prod?.[field]||0);
+  return getKwField(r, field) + (r.rec?.[field]||0);
+}
+
+// 舊格式相容函數
 function getKwSpend(r) {
   if(!r) return 0;
-  // 舊資料有 hasSplit=false 或只有 kw
+  if(r.format === 'new') return r.prod?.spend||0; // 新格式中商品廣告最接近關鍵字廣告
   if(r.hasSplit === false) return r.kw?.spend||0;
-  // 舊資料拆分格式
   const r5zp = (r.r5?.spend||0)+(r.zp?.spend||0);
   if(r5zp > 0) return r5zp;
-  // 新格式或未拆分
   return r.kw?.spend||0;
 }
 function getKwField(r, field) {
   if(!r) return 0;
+  if(r.format === 'new') return r.prod?.[field]||0;
   if(r.hasSplit === false) return r.kw?.[field]||0;
   const r5zp = (r.r5?.[field]||0)+(r.zp?.[field]||0);
   if(r5zp > 0) return r5zp;
@@ -1501,21 +1616,18 @@ function loadRecord(date) {
   if(!rec) return;
   const [y,m] = date.split('-').map(Number);
   if(y!==currentYear||m!==currentMonth){ currentYear=y; currentMonth=m; loadMonthSettings(); updateMonthDisplay(); }
+  updateInputFormat();
   const set = (id,val)=>{ const e=document.getElementById(id); if(e) e.value=val||''; };
   set('record-date',rec.date); set('today-event',rec.event); set('b-today',rec.budgetToday);
-  // 相容舊資料：合併 r5+zp 到 kw
-  const kwSpend = getKwField(rec,'spend');
-  const kwImp   = getKwField(rec,'imp');
-  const kwClick = getKwField(rec,'click');
-  const kwOrders= getKwField(rec,'orders');
-  const kwRev   = getKwField(rec,'rev');
-  set('kw-spend',  kwSpend);
-  set('kw-imp',    kwImp);
-  set('kw-click',  kwClick);
-  set('kw-orders', kwOrders);
-  set('kw-rev',    kwRev);
-  set('rec-spend', rec.rec?.spend||''); set('rec-imp', rec.rec?.imp||'');
-  set('rec-click', rec.rec?.click||''); set('rec-orders', rec.rec?.orders||''); set('rec-rev', rec.rec?.rev||'');
+
+  if(rec.format === 'new') {
+    set('disp-spend',rec.disp?.spend||''); set('disp-imp',rec.disp?.imp||''); set('disp-click',rec.disp?.click||''); set('disp-orders',rec.disp?.orders||''); set('disp-rev',rec.disp?.rev||'');
+    set('gold-spend',rec.gold?.spend||''); set('gold-imp',rec.gold?.imp||''); set('gold-click',rec.gold?.click||''); set('gold-orders',rec.gold?.orders||''); set('gold-rev',rec.gold?.rev||'');
+    set('prod-spend',rec.prod?.spend||''); set('prod-imp',rec.prod?.imp||''); set('prod-click',rec.prod?.click||''); set('prod-orders',rec.prod?.orders||''); set('prod-rev',rec.prod?.rev||'');
+  } else {
+    set('kw-spend', getKwField(rec,'spend')); set('kw-imp', getKwField(rec,'imp')); set('kw-click', getKwField(rec,'click')); set('kw-orders', getKwField(rec,'orders')); set('kw-rev', getKwField(rec,'rev'));
+    set('rec-spend', rec.rec?.spend||''); set('rec-imp', rec.rec?.imp||''); set('rec-click', rec.rec?.click||''); set('rec-orders', rec.rec?.orders||''); set('rec-rev', rec.rec?.rev||'');
+  }
   set('note-text', rec.note);
   calcAll(); updateBudget();
   recalcCumulative();
@@ -1544,10 +1656,7 @@ function recalcCumulative() {
   const prefix = monthKey(currentYear, currentMonth);
   const total = Object.keys(all)
     .filter(k => k.startsWith(prefix))
-    .reduce((sum, k) => {
-      const r = all[k];
-      return sum + getKwSpend(r) + (r.rec?.spend||0);
-    }, 0);
+    .reduce((sum, k) => sum + getTotalSpend(all[k]), 0);
   document.getElementById('b-cum').value = Math.round(total);
   saveMonthSettings();
   updateBudget();
@@ -1586,15 +1695,15 @@ function renderHistory() {
   if(filter !== 'all' && keys.length > 0) {
     const totalSpend = keys.reduce((s,k)=>{
       const r=all[k];
-      return s + getKwSpend(r) + (r.rec?.spend||0);
+      return s + getTotalSpend(r);
     }, 0);
     const totalRev = keys.reduce((s,k)=>{
       const r=all[k];
-      return s + getKwField(r,'rev') + (r.rec?.rev||0);
+      return s + getTotalField(r,'rev');
     }, 0);
     const totalOrders = keys.reduce((s,k)=>{
       const r=all[k];
-      return s + getKwField(r,'orders') + (r.rec?.orders||0);
+      return s + getTotalField(r,'orders');
     }, 0);
     const roas = totalSpend>0 ? totalRev/totalSpend : 0;
     summaryArea.innerHTML = `<div class="month-summary-card">
@@ -1609,9 +1718,9 @@ function renderHistory() {
   if(keys.length===0){ el.innerHTML='<div class="history-empty">📭 這個月份尚無記錄</div>'; return; }
   el.innerHTML = keys.map(date => {
     const r = all[date];
-    const kwSpend = getKwSpend(r);
-    const kwRev   = getKwField(r,'rev');
-    const kwOrd   = getKwField(r,'orders');
+    const kwSpend = getTotalSpend(r);
+    const kwRev   = getTotalField(r,'rev');
+    const kwOrd   = getTotalField(r,'orders');
     const ts = kwSpend + (r.rec?.spend||0);
     const tr = kwRev   + (r.rec?.rev||0);
     const to = kwOrd   + (r.rec?.orders||0);
@@ -1666,10 +1775,13 @@ function exportCSV() {
 function clearInputs() {
   ['kw-spend','kw-imp','kw-click','kw-orders','kw-rev',
    'rec-spend','rec-imp','rec-click','rec-orders','rec-rev',
+   'disp-spend','disp-imp','disp-click','disp-orders','disp-rev',
+   'gold-spend','gold-imp','gold-click','gold-orders','gold-rev',
+   'prod-spend','prod-imp','prod-click','prod-orders','prod-rev',
    'b-today','today-event','today-usage','note-text'].forEach(id=>{
     const e=document.getElementById(id); if(e) e.value='';
   });
-  ['kw','rec'].forEach(p=>['ctr','roas','cpa','cpc','cpm'].forEach(m=>{
+  ['kw','rec','disp','gold','prod'].forEach(p=>['ctr','roas','cpa','cpc','cpm'].forEach(m=>{
     const id=(p==='rec'&&m==='cpm')?'rec-cpm-calc':p+'-'+m;
     const e=document.getElementById(id); if(e){e.textContent='—';e.className='mc-val';}
   }));
@@ -1737,17 +1849,17 @@ function renderStats(forceMonth) {
 
   const rows = keys.map(k => {
     const r = all[k];
-    const kwSpend  = getKwSpend(r);
+    const kwSpend  = getTotalSpend(r);
     const recSpend = r.rec?.spend||0;
     const totalSpend = kwSpend + recSpend;
-    const kwRev    = getKwField(r,'rev');
+    const kwRev    = getTotalField(r,'rev');
     const recRev   = r.rec?.rev||0;
     const totalRev = kwRev + recRev;
-    const kwOrders = getKwField(r,'orders');
+    const kwOrders = getTotalField(r,'orders');
     const recOrders= r.rec?.orders||0;
     const totalOrders = kwOrders + recOrders;
-    const kwClick  = getKwField(r,'click');
-    const kwImp    = getKwField(r,'imp');
+    const kwClick  = getTotalField(r,'click');
+    const kwImp    = getTotalField(r,'imp');
     const recClick = r.rec?.click||0;
     const recImp   = r.rec?.imp||0;
     const totalClick = kwClick + recClick;
@@ -2048,7 +2160,7 @@ function parseImportCSV(text) {
     `✓ 找到 ${count} 筆記錄\n期間：${dates[0]} ～ ${dates[dates.length-1]}\n\n前 5 筆：\n` +
     dates.slice(0,5).map(d => {
       const r = records[d];
-      const spend = getKwSpend(r) + (r.rec?.spend||0);
+      const spend = getTotalSpend(r);
       return `${d}  花費 $${spend.toLocaleString()}  ${r.event||''}`;
     }).join('\n');
   const btn = document.getElementById('import-confirm-btn');
@@ -2673,9 +2785,9 @@ function calcMonthData(all, m) {
   if(!keys.length) return null;
   const t = keys.reduce((a,k)=>{
     const r=all[k];
-    return { spend:a.spend+getKwSpend(r)+(r.rec?.spend||0), rev:a.rev+getKwField(r,'rev')+(r.rec?.rev||0),
-             orders:a.orders+getKwField(r,'orders')+(r.rec?.orders||0),
-             click:a.click+getKwField(r,'click')+(r.rec?.click||0), imp:a.imp+getKwField(r,'imp')+(r.rec?.imp||0) };
+    return { spend:a.spend+getTotalSpend(r), rev:a.rev+getTotalField(r,'rev'),
+             orders:a.orders+getTotalField(r,'orders'),
+             click:a.click+getTotalField(r,'click'), imp:a.imp+getTotalField(r,'imp') };
   }, {spend:0,rev:0,orders:0,click:0,imp:0});
   return { m, ...t, roas:t.spend>0?t.rev/t.spend:0, cpa:t.orders>0?t.spend/t.orders:0,
            cpc:t.click>0?t.spend/t.click:0, ctr:t.imp>0?t.click/t.imp:0 };
