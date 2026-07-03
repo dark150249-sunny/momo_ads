@@ -1198,22 +1198,37 @@ function recToSheetRow(date, rec) {
 
 function sheetRowToRec(row) {
   const pf = v => parseFloat(v)||0;
-  // 新格式（6月起）：Apps Script 回傳 disp/gold/prod
-  if(row.disp !== undefined) {
+  const mkBlock = obj => ({ spend:pf(obj?.spend), imp:pf(obj?.imp), click:pf(obj?.click), orders:pf(obj?.orders), rev:pf(obj?.rev) });
+
+  // 5月（過渡月）：關鍵字+推薦+展示型+黃金置頂+商品廣告
+  if(row.format === 'may') {
     return {
-      date: row.date, event: row.event||'', budgetToday: 0, format: 'new',
-      disp: { spend:pf(row.disp?.spend), imp:pf(row.disp?.imp), click:pf(row.disp?.click), orders:pf(row.disp?.orders), rev:pf(row.disp?.rev) },
-      gold: { spend:pf(row.gold?.spend), imp:pf(row.gold?.imp), click:pf(row.gold?.click), orders:pf(row.gold?.orders), rev:pf(row.gold?.rev) },
-      prod: { spend:pf(row.prod?.spend), imp:pf(row.prod?.imp), click:pf(row.prod?.click), orders:pf(row.prod?.orders), rev:pf(row.prod?.rev) },
+      date: row.date, event: row.event||'', budgetToday: 0, format: 'may',
+      kw: mkBlock(row.kw), rec: mkBlock(row.rec), disp: mkBlock(row.disp), gold: mkBlock(row.gold), prod: mkBlock(row.prod),
       note: row.note||''
     };
   }
-  // 舊格式（5月以前）：kw/rec
+  // 4月：關鍵字+推薦+展示型+黃金置頂
+  if(row.format === 'apr') {
+    return {
+      date: row.date, event: row.event||'', budgetToday: 0, format: 'apr',
+      kw: mkBlock(row.kw), rec: mkBlock(row.rec), disp: mkBlock(row.disp), gold: mkBlock(row.gold),
+      note: row.note||''
+    };
+  }
+  // 新格式（6月起）：Apps Script 回傳 disp/gold/prod
+  if(row.format === 'new' || row.disp !== undefined) {
+    return {
+      date: row.date, event: row.event||'', budgetToday: 0, format: 'new',
+      disp: mkBlock(row.disp), gold: mkBlock(row.gold), prod: mkBlock(row.prod),
+      note: row.note||''
+    };
+  }
+  // 舊格式（3月以前）：kw/rec
   if(row.kw !== undefined || row.rec !== undefined) {
     return {
       date: row.date, event: row.event||'', budgetToday: 0, format: 'old',
-      kw:  { spend:pf(row.kw?.spend), imp:pf(row.kw?.imp), click:pf(row.kw?.click), orders:pf(row.kw?.orders), rev:pf(row.kw?.rev) },
-      rec: { spend:pf(row.rec?.spend), imp:pf(row.rec?.imp), click:pf(row.rec?.click), orders:pf(row.rec?.orders), rev:pf(row.rec?.rev) },
+      kw: mkBlock(row.kw), rec: mkBlock(row.rec),
       note: row.note||''
     };
   }
@@ -1444,9 +1459,29 @@ function setMetrics(pre, spend, click, imp, orders, rev) {
   setEl(cpmId, fmtMoney(cpm));
 }
 
-// ── 新舊格式判斷（6月起為新格式）──
+// ── 新舊格式判斷（6月起為新格式，僅用於「輸入頁」的新舊二選一）──
 function isNewFormat(year, month) {
   return (year > 2026) || (year === 2026 && month >= 6);
+}
+
+// ── 月份廣告組成判斷（用於「歷史查看/統計/月報」，4種組成）──
+// old = 關鍵字+推薦（3月以前）
+// apr = 關鍵字+推薦+展示型+黃金置頂（4月）
+// may = 關鍵字+推薦+展示型+黃金置頂+商品廣告（5月，過渡月）
+// new = 展示型+黃金置頂+商品廣告（6月起）
+function getMonthFormat(year, month) {
+  if(year > 2026) return 'new';
+  if(year < 2026) return 'old';
+  if(month <= 3) return 'old';
+  if(month === 4) return 'apr';
+  if(month === 5) return 'may';
+  return 'new';
+}
+function monthFormatLabel(fmt) {
+  if(fmt === 'new') return '展示型 + 黃金置頂 + 商品廣告';
+  if(fmt === 'may') return '關鍵字 + 推薦 + 展示型 + 黃金置頂 + 商品廣告';
+  if(fmt === 'apr') return '關鍵字 + 推薦 + 展示型 + 黃金置頂';
+  return '關鍵字 + 推薦廣告';
 }
 
 // 切換輸入頁格式
@@ -1588,17 +1623,21 @@ function saveRecord() {
     .catch(() => showToast('⚠ 本機已儲存，Sheets 同步失敗'));
 }
 
-// ── 統一取花費/欄位（相容新舊格式）──
+// ── 統一取花費/欄位（相容 old/apr/may/new 四種格式）──
 function getTotalSpend(r) {
   if(!r) return 0;
-  if(r.format === 'new' || r.disp !== undefined)
-    return (r.disp?.spend||0)+(r.gold?.spend||0)+(r.prod?.spend||0);
+  const fmt = r.format || (r.disp !== undefined ? 'new' : 'old');
+  if(fmt === 'may') return getKwSpend(r)+(r.rec?.spend||0)+(r.disp?.spend||0)+(r.gold?.spend||0)+(r.prod?.spend||0);
+  if(fmt === 'apr') return getKwSpend(r)+(r.rec?.spend||0)+(r.disp?.spend||0)+(r.gold?.spend||0);
+  if(fmt === 'new') return (r.disp?.spend||0)+(r.gold?.spend||0)+(r.prod?.spend||0);
   return getKwSpend(r) + (r.rec?.spend||0);
 }
 function getTotalField(r, field) {
   if(!r) return 0;
-  if(r.format === 'new' || r.disp !== undefined)
-    return (r.disp?.[field]||0)+(r.gold?.[field]||0)+(r.prod?.[field]||0);
+  const fmt = r.format || (r.disp !== undefined ? 'new' : 'old');
+  if(fmt === 'may') return getKwField(r,field)+(r.rec?.[field]||0)+(r.disp?.[field]||0)+(r.gold?.[field]||0)+(r.prod?.[field]||0);
+  if(fmt === 'apr') return getKwField(r,field)+(r.rec?.[field]||0)+(r.disp?.[field]||0)+(r.gold?.[field]||0);
+  if(fmt === 'new') return (r.disp?.[field]||0)+(r.gold?.[field]||0)+(r.prod?.[field]||0);
   return getKwField(r, field) + (r.rec?.[field]||0);
 }
 
@@ -1858,33 +1897,33 @@ function renderStats(forceMonth) {
 
   const rows = keys.map(k => {
     const r = all[k];
-    const isNew = r.format === 'new' || r.disp !== undefined;
-    const dispSpend = isNew ? (r.disp?.spend||0) : 0;
-    const goldSpend = isNew ? (r.gold?.spend||0) : 0;
-    const prodSpend = isNew ? (r.prod?.spend||0) : 0;
-    const kwSpend  = getTotalSpend(r);
-    const recSpend = isNew ? 0 : (r.rec?.spend||0);
-    const totalSpend = kwSpend;
+    const fmt = r.format || (r.disp !== undefined ? 'new' : 'old');
+    const hasKw   = fmt==='old' || fmt==='apr' || fmt==='may';
+    const hasDisp = fmt==='apr' || fmt==='may' || fmt==='new';
+    const hasProd = fmt==='may' || fmt==='new';
+    const kwSpend   = hasKw   ? getKwSpend(r)     : 0;
+    const recSpend  = hasKw   ? (r.rec?.spend||0) : 0;
+    const dispSpend = hasDisp ? (r.disp?.spend||0): 0;
+    const goldSpend = hasDisp ? (r.gold?.spend||0): 0;
+    const prodSpend = hasProd ? (r.prod?.spend||0): 0;
+    const totalSpend = getTotalSpend(r);
     const totalRev   = getTotalField(r,'rev');
     const totalOrders= getTotalField(r,'orders');
     const totalClick = getTotalField(r,'click');
     const totalImp   = getTotalField(r,'imp');
-    const kwImp   = totalImp;
-    const kwClick = totalClick;
     const roas = totalSpend>0 ? totalRev/totalSpend : 0;
     const cpc  = totalClick>0 ? totalSpend/totalClick : 0;
     const cpm  = totalImp>0   ? (totalSpend/totalImp)*1000 : 0;
     const cpa  = totalOrders>0 ? totalSpend/totalOrders : 0;
     const ctr  = totalImp>0   ? totalClick/totalImp : 0;
-    return { date:k.slice(5), fullDate:k, event:r.event||'', kwSpend, recSpend, dispSpend, goldSpend, prodSpend, totalSpend, totalRev, totalOrders, kwClick, kwImp, totalClick, totalImp, roas, cpc, cpm, cpa, ctr };
+    return { date:k.slice(5), fullDate:k, event:r.event||'', fmt, kwSpend, recSpend, dispSpend, goldSpend, prodSpend, totalSpend, totalRev, totalOrders, totalClick, totalImp, roas, cpc, cpm, cpa, ctr };
   });
 
   const tot = rows.reduce((a,r)=>({
     spend:a.spend+r.totalSpend, rev:a.rev+r.totalRev,
     orders:a.orders+r.totalOrders,
-    totalClick:a.totalClick+r.totalClick, totalImp:a.totalImp+r.totalImp,
-    kwImp:a.kwImp+r.kwImp
-  }), {spend:0,rev:0,orders:0,totalClick:0,totalImp:0,kwImp:0});
+    totalClick:a.totalClick+r.totalClick, totalImp:a.totalImp+r.totalImp
+  }), {spend:0,rev:0,orders:0,totalClick:0,totalImp:0});
   const avgRoas = tot.spend>0 ? tot.rev/tot.spend : 0;
   const avgCpc  = tot.totalClick>0 ? tot.spend/tot.totalClick : 0;
   const avgCpm  = tot.totalImp>0   ? (tot.spend/tot.totalImp)*1000 : 0;
@@ -1902,9 +1941,9 @@ function renderStats(forceMonth) {
   if(prevKeys2.length) {
     const p = prevKeys2.reduce((a,k)=>{
       const r=allRec[k];
-      return { spend:a.spend+getKwSpend(r)+(r.rec?.spend||0), rev:a.rev+getKwField(r,'rev')+(r.rec?.rev||0),
-               orders:a.orders+getKwField(r,'orders')+(r.rec?.orders||0),
-               click:a.click+getKwField(r,'click')+(r.rec?.click||0), imp:a.imp+getKwField(r,'imp')+(r.rec?.imp||0) };
+      return { spend:a.spend+getTotalSpend(r), rev:a.rev+getTotalField(r,'rev'),
+               orders:a.orders+getTotalField(r,'orders'),
+               click:a.click+getTotalField(r,'click'), imp:a.imp+getTotalField(r,'imp') };
     }, {spend:0,rev:0,orders:0,click:0,imp:0});
     prevTot = { spend:p.spend, rev:p.rev, orders:p.orders,
       roas:p.spend>0?p.rev/p.spend:0, cpc:p.click>0?p.spend/p.click:0,
@@ -1938,21 +1977,23 @@ function renderStats(forceMonth) {
             <div class="kpi-achieve" style="color:${clr};">${pct.toFixed(0)}% ${pct>=100?(inverse?'⚠ 超標':'✓ 達標'):'進行中'}</div>`;
   };
 
-  // 判斷是否為新格式月份（提前宣告，避免下方 KPI 卡片組字串時因 TDZ 而報錯）
+  // 判斷該月廣告組成（提前宣告，避免下方 KPI 卡片組字串時因 TDZ 而報錯）
   const [fy,fm] = filter.split('-').map(Number);
-  const isNewFmt = isNewFormat(fy, fm);
+  const monthFmt = getMonthFormat(fy, fm);
+  const isNewFmt = monthFmt === 'new';
+  const fmtLabel = monthFormatLabel(monthFmt);
 
   const kpiEl = document.getElementById('stats-kpi');
   kpiEl.innerHTML = `
     <div class="kpi-card k-spend"><div class="kpi-lbl">月總花費</div><div class="kpi-val">$${Math.round(tot.spend).toLocaleString()}${momTag(tot.spend,prevTot?.spend,true)}</div><div class="kpi-sub">${rows.length} 天記錄${prevTot?` ｜ 上月 $${Math.round(prevTot.spend).toLocaleString()}`:''}</div>${goalSpend?progBar(tot.spend,goalSpend,true):''}</div>
-    <div class="kpi-card k-rev"><div class="kpi-lbl">廣告帶入業績</div><div class="kpi-val">$${Math.round(tot.rev).toLocaleString()}${momTag(tot.rev,prevTot?.rev)}</div><div class="kpi-sub">${isNewFmt?"展示型 + 黃金置頂 + 商品廣告":"關鍵字 + 推薦廣告"}${prevTot?` ｜ 上月 $${Math.round(prevTot.rev).toLocaleString()}`:''}</div>${goalRev?progBar(tot.rev,goalRev):''}</div>
+    <div class="kpi-card k-rev"><div class="kpi-lbl">廣告帶入業績</div><div class="kpi-val">$${Math.round(tot.rev).toLocaleString()}${momTag(tot.rev,prevTot?.rev)}</div><div class="kpi-sub">${fmtLabel}${prevTot?` ｜ 上月 $${Math.round(prevTot.rev).toLocaleString()}`:''}</div>${goalRev?progBar(tot.rev,goalRev):''}</div>
     <div class="kpi-card k-roas"><div class="kpi-lbl">月均 ROAS</div><div class="kpi-val">${avgRoas>0?avgRoas.toFixed(2)+'x':'—'}${momTag(avgRoas,prevTot?.roas)}</div><div class="kpi-sub">目標 ≥ ${goalRoas}x${prevTot?` ｜ 上月 ${prevTot.roas.toFixed(2)}x`:''}</div>${progBar(avgRoas,goalRoas)}</div>
     <div class="kpi-card k-orders"><div class="kpi-lbl">月總訂單</div><div class="kpi-val">${tot.orders}筆${momTag(tot.orders,prevTot?.orders)}</div><div class="kpi-sub">日均 ${(tot.orders/rows.length).toFixed(1)} 筆${prevTot?` ｜ 上月 ${prevTot.orders}筆`:''}</div>${goalOrders?progBar(tot.orders,goalOrders):''}</div>
-    <div class="kpi-card k-imp"><div class="kpi-lbl">月總曝光數</div><div class="kpi-val">${tot.totalImp>0?tot.totalImp.toLocaleString():'—'}${momTag(tot.totalImp,prevTot?.imp)}</div><div class="kpi-sub">${isNewFmt?"展示型 + 黃金置頂 + 商品廣告":"關鍵字 + 推薦廣告"}${prevTot?` ｜ 上月 ${prevTot.imp.toLocaleString()}`:''}</div></div>
-    <div class="kpi-card k-cpc"><div class="kpi-lbl">月均 CPC</div><div class="kpi-val">${avgCpc>0?'$'+Math.round(avgCpc):'—'}${momTag(avgCpc,prevTot?.cpc,true)}</div><div class="kpi-sub">${isNewFmt?"展示型 + 黃金置頂 + 商品廣告":"關鍵字 + 推薦廣告"}${prevTot?` ｜ 上月 $${Math.round(prevTot.cpc)}`:''}</div></div>
-    <div class="kpi-card k-cpm"><div class="kpi-lbl">月均 CPM</div><div class="kpi-val">${avgCpm>0?'$'+Math.round(avgCpm):'—'}${momTag(avgCpm,prevTot?.cpm,true)}</div><div class="kpi-sub">${isNewFmt?"展示型 + 黃金置頂 + 商品廣告":"關鍵字 + 推薦廣告"}${prevTot?` ｜ 上月 $${Math.round(prevTot.cpm)}`:''}</div></div>
-    <div class="kpi-card k-cpa"><div class="kpi-lbl">月均 CPA</div><div class="kpi-val">${avgCpa>0?'$'+Math.round(avgCpa):'—'}${momTag(avgCpa,prevTot?.cpa,true)}</div><div class="kpi-sub">${isNewFmt?"展示型 + 黃金置頂 + 商品廣告":"關鍵字 + 推薦廣告"}${prevTot?` ｜ 上月 $${Math.round(prevTot.cpa)}`:''}</div></div>
-    <div class="kpi-card k-ctr"><div class="kpi-lbl">月均點擊率</div><div class="kpi-val">${avgCtr>0?(avgCtr*100).toFixed(2)+'%':'—'}${momTag(avgCtr,prevTot?.ctr)}</div><div class="kpi-sub">${isNewFmt?"展示型 + 黃金置頂 + 商品廣告":"關鍵字 + 推薦廣告"}${prevTot?` ｜ 上月 ${(prevTot.ctr*100).toFixed(2)}%`:''}</div></div>`;
+    <div class="kpi-card k-imp"><div class="kpi-lbl">月總曝光數</div><div class="kpi-val">${tot.totalImp>0?tot.totalImp.toLocaleString():'—'}${momTag(tot.totalImp,prevTot?.imp)}</div><div class="kpi-sub">${fmtLabel}${prevTot?` ｜ 上月 ${prevTot.imp.toLocaleString()}`:''}</div></div>
+    <div class="kpi-card k-cpc"><div class="kpi-lbl">月均 CPC</div><div class="kpi-val">${avgCpc>0?'$'+Math.round(avgCpc):'—'}${momTag(avgCpc,prevTot?.cpc,true)}</div><div class="kpi-sub">${fmtLabel}${prevTot?` ｜ 上月 $${Math.round(prevTot.cpc)}`:''}</div></div>
+    <div class="kpi-card k-cpm"><div class="kpi-lbl">月均 CPM</div><div class="kpi-val">${avgCpm>0?'$'+Math.round(avgCpm):'—'}${momTag(avgCpm,prevTot?.cpm,true)}</div><div class="kpi-sub">${fmtLabel}${prevTot?` ｜ 上月 $${Math.round(prevTot.cpm)}`:''}</div></div>
+    <div class="kpi-card k-cpa"><div class="kpi-lbl">月均 CPA</div><div class="kpi-val">${avgCpa>0?'$'+Math.round(avgCpa):'—'}${momTag(avgCpa,prevTot?.cpa,true)}</div><div class="kpi-sub">${fmtLabel}${prevTot?` ｜ 上月 $${Math.round(prevTot.cpa)}`:''}</div></div>
+    <div class="kpi-card k-ctr"><div class="kpi-lbl">月均點擊率</div><div class="kpi-val">${avgCtr>0?(avgCtr*100).toFixed(2)+'%':'—'}${momTag(avgCtr,prevTot?.ctr)}</div><div class="kpi-sub">${fmtLabel}${prevTot?` ｜ 上月 ${(prevTot.ctr*100).toFixed(2)}%`:''}</div></div>`;
 
   // ── MoM comparison ──
   renderMomSummary(filter, tot, avgRoas, avgCpc, avgCpm, avgCpa, avgCtr, rows.length, prevTot, prevKeys2.length);
@@ -1983,35 +2024,28 @@ function renderStats(forceMonth) {
       }}
   });
 
-  // Chart 2: pie spend breakdown
+  // Chart 2: pie spend breakdown（依 monthFmt 動態組成，涵蓋 old/apr/may/new 四種）
   destroyChart('pie');
-  if(isNewFmt) {
-    const dispTotal = rows.reduce((s,r)=>s+(r.dispSpend||0),0);
-    const goldTotal = rows.reduce((s,r)=>s+(r.goldSpend||0),0);
-    const prodTotal = rows.reduce((s,r)=>s+(r.prodSpend||0),0);
-    const pieTotal  = dispTotal+goldTotal+prodTotal;
-    _charts['pie'] = new Chart(document.getElementById('chart-spend-pie'),{
-      type:'doughnut',
-      data:{labels:['展示型廣告','黃金置頂','商品廣告'],
-        datasets:[{data:[Math.round(dispTotal),Math.round(goldTotal),Math.round(prodTotal)],
-          backgroundColor:['#6366F1','#F59E0B','#378ADD'],borderWidth:0,hoverOffset:4}]},
-      options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
-        plugins:{legend:{display:true,position:'bottom',labels:{color:tc,font:{size:11},boxWidth:10,padding:10}},
-          tooltip:{callbacks:{label:ctx=>' $'+ctx.parsed.toLocaleString()+' ('+((ctx.parsed/pieTotal)*100).toFixed(1)+'%)'}}}}
-    });
-  } else {
-    const kwTotal  = rows.reduce((s,r)=>s+r.kwSpend,0);
-    const recTotal = rows.reduce((s,r)=>s+r.recSpend,0);
-    _charts['pie'] = new Chart(document.getElementById('chart-spend-pie'),{
-      type:'doughnut',
-      data:{labels:['關鍵字廣告','推薦廣告'],
-        datasets:[{data:[Math.round(kwTotal),Math.round(recTotal)],
-          backgroundColor:['#378ADD','#F59E0B'],borderWidth:0,hoverOffset:4}]},
-      options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
-        plugins:{legend:{display:true,position:'bottom',labels:{color:tc,font:{size:11},boxWidth:10,padding:10}},
-          tooltip:{callbacks:{label:ctx=>' $'+ctx.parsed.toLocaleString()+' ('+((ctx.parsed/(kwTotal+recTotal))*100).toFixed(1)+'%)'}}}}
-    });
-  }
+  const pieDefs = {
+    old: [ ['關鍵字廣告','kwSpend','#378ADD'], ['推薦廣告','recSpend','#F59E0B'] ],
+    apr: [ ['關鍵字廣告','kwSpend','#378ADD'], ['推薦廣告','recSpend','#F59E0B'], ['展示型廣告','dispSpend','#6366F1'], ['黃金置頂','goldSpend','#059669'] ],
+    may: [ ['關鍵字廣告','kwSpend','#378ADD'], ['推薦廣告','recSpend','#F59E0B'], ['展示型廣告','dispSpend','#6366F1'], ['黃金置頂','goldSpend','#059669'], ['商品廣告','prodSpend','#DC2626'] ],
+    new: [ ['展示型廣告','dispSpend','#6366F1'], ['黃金置頂','goldSpend','#F59E0B'], ['商品廣告','prodSpend','#378ADD'] ]
+  };
+  const pieDef = pieDefs[monthFmt] || pieDefs.old;
+  const pieLabels = pieDef.map(d=>d[0]);
+  const pieColors = pieDef.map(d=>d[2]);
+  const pieValues = pieDef.map(d => rows.reduce((s,r)=>s+(r[d[1]]||0),0));
+  const pieTotal  = pieValues.reduce((a,b)=>a+b,0);
+  _charts['pie'] = new Chart(document.getElementById('chart-spend-pie'),{
+    type:'doughnut',
+    data:{labels:pieLabels,
+      datasets:[{data:pieValues.map(v=>Math.round(v)),
+        backgroundColor:pieColors,borderWidth:0,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+      plugins:{legend:{display:true,position:'bottom',labels:{color:tc,font:{size:11},boxWidth:10,padding:10}},
+        tooltip:{callbacks:{label:ctx=>' $'+ctx.parsed.toLocaleString()+' ('+(pieTotal>0?(ctx.parsed/pieTotal)*100:0).toFixed(1)+'%)'}}}}
+  });
 
   // Chart 3: ROAS
   destroyChart('roas');
@@ -2050,28 +2084,19 @@ function renderStats(forceMonth) {
     }}
   });
 
-  // Detail table - header 根據新舊格式切換
+  // Detail table - header/欄位 根據 monthFmt 動態產生（沿用 pieDef：old/apr/may/new 各自的廣告類型組合）
+  const breakdownCols = pieDef.map(d => ({ label:d[0].replace(/廣告$/,''), key:d[1] }));
   const thead = document.getElementById('stats-detail-head');
   if(thead) {
-    if(isNewFmt) {
-      thead.innerHTML = '<tr><th>日期</th><th>活動</th><th>展示型</th><th>黃金置頂</th><th>商品廣告</th><th>總花費</th><th>訂購金額</th><th>ROAS</th><th>訂單數</th><th>曝光數</th><th>點擊率</th><th>CPC</th><th>CPM</th><th>CPA</th></tr>';
-    } else {
-      thead.innerHTML = '<tr><th>日期</th><th>活動</th><th>關鍵字花費</th><th>推薦花費</th><th>總花費</th><th>訂購金額</th><th>ROAS</th><th>訂單數</th><th>曝光數</th><th>點擊率</th><th>CPC</th><th>CPM</th><th>CPA</th></tr>';
-    }
+    const extraTh = breakdownCols.map(c=>`<th>${c.label}</th>`).join('');
+    thead.innerHTML = `<tr><th>日期</th><th>活動</th>${extraTh}<th>總花費</th><th>訂購金額</th><th>ROAS</th><th>訂單數</th><th>曝光數</th><th>點擊率</th><th>CPC</th><th>CPM</th><th>CPA</th></tr>`;
   }
   const tbody = document.getElementById('stats-detail-body');
   const roasClass = r => r>=8?'roas-good':r>=5?'roas-warn':r>0?'roas-bad':'';
   tbody.innerHTML = rows.map(r=>`<tr>
     <td>${r.fullDate}</td>
     <td>${r.event?`<span class="evt-tag">${r.event}</span>`:''}</td>
-    ${isNewFmt ? `
-    <td>$${Math.round(r.dispSpend).toLocaleString()}</td>
-    <td>$${Math.round(r.goldSpend).toLocaleString()}</td>
-    <td>$${Math.round(r.prodSpend).toLocaleString()}</td>
-    ` : `
-    <td>$${Math.round(r.kwSpend).toLocaleString()}</td>
-    <td>$${Math.round(r.recSpend).toLocaleString()}</td>
-    `}
+    ${breakdownCols.map(c=>`<td>$${Math.round(r[c.key]||0).toLocaleString()}</td>`).join('')}
     <td><strong>$${Math.round(r.totalSpend).toLocaleString()}</strong></td>
     <td>$${Math.round(r.totalRev).toLocaleString()}</td>
     <td class="${roasClass(r.roas)}">${r.roas>0?r.roas.toFixed(2)+'x':'—'}</td>
@@ -2084,14 +2109,7 @@ function renderStats(forceMonth) {
   </tr>`).join('') +
   `<tr style="font-weight:700;background:var(--surface2);">
     <td colspan="2">合計 / 平均</td>
-    ${isNewFmt ? `
-    <td>$${Math.round(rows.reduce((s,r)=>s+(r.dispSpend||0),0)).toLocaleString()}</td>
-    <td>$${Math.round(rows.reduce((s,r)=>s+(r.goldSpend||0),0)).toLocaleString()}</td>
-    <td>$${Math.round(rows.reduce((s,r)=>s+(r.prodSpend||0),0)).toLocaleString()}</td>
-    ` : `
-    <td>$${Math.round(rows.reduce((s,r)=>s+r.kwSpend,0)).toLocaleString()}</td>
-    <td>$${Math.round(rows.reduce((s,r)=>s+r.recSpend,0)).toLocaleString()}</td>
-    `}
+    ${breakdownCols.map(c=>`<td>$${Math.round(rows.reduce((s,r)=>s+(r[c.key]||0),0)).toLocaleString()}</td>`).join('')}
     <td>$${Math.round(tot.spend).toLocaleString()}</td>
     <td>$${Math.round(tot.rev).toLocaleString()}</td>
     <td class="${roasClass(avgRoas)}">${avgRoas>0?avgRoas.toFixed(2)+'x':'—'}</td>
@@ -2684,18 +2702,15 @@ function renderMomSummary(filter, cur, curRoas, curCpc, curCpm, curCpa, curCtr, 
     return;
   }
 
-  // Calc prev month totals
+  // Calc prev month totals（用 getTotalSpend/getTotalField，涵蓋 old/apr/may/new 各格式的所有廣告區塊）
   const prev = prevKeys.reduce((a,k)=>{
     const r=all[k];
-    const recSpend= r.rec?.spend||0;
-    const recRev  = r.rec?.rev||0;
-    const recOrd  = r.rec?.orders||0;
     return {
-      spend: a.spend+getKwSpend(r)+recSpend,
-      rev:   a.rev+getKwField(r,'rev')+recRev,
-      orders:a.orders+getKwField(r,'orders')+recOrd,
-      totalClick:a.totalClick+getKwField(r,'click')+(r.rec?.click||0),
-      totalImp:  a.totalImp+getKwField(r,'imp')+(r.rec?.imp||0)
+      spend: a.spend+getTotalSpend(r),
+      rev:   a.rev+getTotalField(r,'rev'),
+      orders:a.orders+getTotalField(r,'orders'),
+      totalClick:a.totalClick+getTotalField(r,'click'),
+      totalImp:  a.totalImp+getTotalField(r,'imp')
     };
   }, {spend:0,rev:0,orders:0,totalClick:0,totalImp:0});
 
@@ -2924,8 +2939,8 @@ function renderTrend() {
     const qData = qKeys.map(qk=>{
       const t = quarters[qk].reduce((a,k)=>{
         const r=all[k];
-        return { spend:a.spend+getKwSpend(r)+(r.rec?.spend||0), rev:a.rev+getKwField(r,'rev')+(r.rec?.rev||0),
-                 orders:a.orders+getKwField(r,'orders')+(r.rec?.orders||0) };
+        return { spend:a.spend+getTotalSpend(r), rev:a.rev+getTotalField(r,'rev'),
+                 orders:a.orders+getTotalField(r,'orders') };
       }, {spend:0,rev:0,orders:0});
       return { q:qk, ...t, roas:t.spend>0?t.rev/t.spend:0, cpa:t.orders>0?t.spend/t.orders:0 };
     });
@@ -2976,8 +2991,8 @@ function renderTrend() {
     const yData = yKeys.map(y=>{
       const t = years[y].reduce((a,k)=>{
         const r=all[k];
-        return { spend:a.spend+getKwSpend(r)+(r.rec?.spend||0), rev:a.rev+getKwField(r,'rev')+(r.rec?.rev||0),
-                 orders:a.orders+getKwField(r,'orders')+(r.rec?.orders||0) };
+        return { spend:a.spend+getTotalSpend(r), rev:a.rev+getTotalField(r,'rev'),
+                 orders:a.orders+getTotalField(r,'orders') };
       }, {spend:0,rev:0,orders:0});
       return { y, ...t, roas:t.spend>0?t.rev/t.spend:0, cpa:t.orders>0?t.spend/t.orders:0 };
     });
@@ -3033,9 +3048,9 @@ async function generateAISummary(filter) {
   // 當月數據
   const rows = keys.map(k=>{
     const r=all[k];
-    return { date:k.slice(5), spend:getKwSpend(r)+(r.rec?.spend||0),
-             rev:getKwField(r,'rev')+(r.rec?.rev||0), orders:getKwField(r,'orders')+(r.rec?.orders||0),
-             click:getKwField(r,'click')+(r.rec?.click||0), imp:getKwField(r,'imp')+(r.rec?.imp||0) };
+    return { date:k.slice(5), spend:getTotalSpend(r),
+             rev:getTotalField(r,'rev'), orders:getTotalField(r,'orders'),
+             click:getTotalField(r,'click'), imp:getTotalField(r,'imp') };
   });
   const tot = rows.reduce((a,r)=>({spend:a.spend+r.spend,rev:a.rev+r.rev,orders:a.orders+r.orders,click:a.click+r.click,imp:a.imp+r.imp}),{spend:0,rev:0,orders:0,click:0,imp:0});
   const roas = tot.spend>0 ? (tot.rev/tot.spend).toFixed(2) : 0;
@@ -3052,8 +3067,8 @@ async function generateAISummary(filter) {
   if(prevKeys.length) {
     const pt = prevKeys.reduce((a,k)=>{
       const r=all[k];
-      return {spend:a.spend+getKwSpend(r)+(r.rec?.spend||0),rev:a.rev+getKwField(r,'rev')+(r.rec?.rev||0),
-              orders:a.orders+getKwField(r,'orders')+(r.rec?.orders||0)};
+      return {spend:a.spend+getTotalSpend(r),rev:a.rev+getTotalField(r,'rev'),
+              orders:a.orders+getTotalField(r,'orders')};
     },{spend:0,rev:0,orders:0});
     prevData = pt;
     const proas = pt.spend>0?(pt.rev/pt.spend).toFixed(2):0;
