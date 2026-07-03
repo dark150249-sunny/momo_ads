@@ -1267,16 +1267,8 @@ async function syncFromSheets() {
     local[date] = sheetRowToRec(rows[date]);
   });
   localStorage.setItem('momo_ad_records', JSON.stringify(local));
-  recalcCumulative();
+  recalcAllCumulative();
   showToast('✓ 已從 Google Sheets 同步 '+Object.keys(rows).length+' 筆資料');
-  // 強制更新左側累計花費
-  const prefix = monthKey(currentYear, currentMonth);
-  const all2 = getAllRecords();
-  const monthTotal = Object.keys(all2).filter(k=>k.startsWith(prefix))
-    .reduce((sum,k)=>sum+getTotalSpend(all2[k]),0);
-  document.getElementById('b-cum').value = Math.round(monthTotal);
-  saveMonthSettings();
-  updateBudget();
 
   // 如果數據統計頁面開著，自動刷新
   if(document.getElementById('page-stats')?.classList.contains('active')) {
@@ -1336,6 +1328,7 @@ function shiftModalYear(delta) {
 }
 function onMonthChange() {
   loadMonthSettings();
+  recalcCumulative(currentYear, currentMonth);
   updateMonthDisplay();
   updateBudget();
   document.getElementById('record-date').value = `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`;
@@ -1700,15 +1693,31 @@ function confirmResolve(result) {
 }
 
 // 重新從當月所有記錄加總累計花費
-function recalcCumulative() {
+function recalcCumulative(y, m) {
+  const yy = y||currentYear, mm = m||currentMonth;
   const all = getAllRecords();
-  const prefix = monthKey(currentYear, currentMonth);
+  const prefix = monthKey(yy, mm);
   const total = Object.keys(all)
     .filter(k => k.startsWith(prefix))
     .reduce((sum, k) => sum + getTotalSpend(all[k]), 0);
-  document.getElementById('b-cum').value = Math.round(total);
-  saveMonthSettings();
-  updateBudget();
+  const settings = JSON.parse(localStorage.getItem('momo_month_settings')||'{}');
+  const key = monthKey(yy, mm);
+  settings[key] = { budgetTotal: settings[key]?.budgetTotal||50000, budgetCum: Math.round(total) };
+  localStorage.setItem('momo_month_settings', JSON.stringify(settings));
+  if(yy===currentYear && mm===currentMonth) {
+    document.getElementById('b-cum').value = Math.round(total);
+    updateBudget();
+  }
+}
+
+// 重新計算「所有」出現過資料的月份的累計花費（避免只更新當下這個月，其他月份留下舊快取）
+function recalcAllCumulative() {
+  const all = getAllRecords();
+  const months = [...new Set(Object.keys(all).map(k=>k.slice(0,7)))];
+  months.forEach(mk => {
+    const [yy,mm] = mk.split('-').map(Number);
+    recalcCumulative(yy, mm);
+  });
 }
 
 async function deleteRecord(date) {
