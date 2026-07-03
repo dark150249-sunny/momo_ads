@@ -1938,6 +1938,10 @@ function renderStats(forceMonth) {
             <div class="kpi-achieve" style="color:${clr};">${pct.toFixed(0)}% ${pct>=100?(inverse?'⚠ 超標':'✓ 達標'):'進行中'}</div>`;
   };
 
+  // 判斷是否為新格式月份（提前宣告，避免下方 KPI 卡片組字串時因 TDZ 而報錯）
+  const [fy,fm] = filter.split('-').map(Number);
+  const isNewFmt = isNewFormat(fy, fm);
+
   const kpiEl = document.getElementById('stats-kpi');
   kpiEl.innerHTML = `
     <div class="kpi-card k-spend"><div class="kpi-lbl">月總花費</div><div class="kpi-val">$${Math.round(tot.spend).toLocaleString()}${momTag(tot.spend,prevTot?.spend,true)}</div><div class="kpi-sub">${rows.length} 天記錄${prevTot?` ｜ 上月 $${Math.round(prevTot.spend).toLocaleString()}`:''}</div>${goalSpend?progBar(tot.spend,goalSpend,true):''}</div>
@@ -1980,11 +1984,6 @@ function renderStats(forceMonth) {
   });
 
   // Chart 2: pie spend breakdown
-  destroyChart('pie');
-  // 判斷是否為新格式月份
-  const [fy,fm] = filter.split('-').map(Number);
-  const isNewFmt = isNewFormat(fy, fm);
-
   destroyChart('pie');
   if(isNewFmt) {
     const dispTotal = rows.reduce((s,r)=>s+(r.dispSpend||0),0);
